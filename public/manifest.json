@@ -17,19 +17,37 @@
             "name": "Add Mango Loco",
             "short_name": "Mango Loco",
             "description": "Quickly add a Mango Loco to your daily tracker",
-            "url": "/?quickadd=mango-loco"
+            "url": "/?quickadd=mango-loco",
+            "icons": [
+                {
+                    "src": "fav.jpg",
+                    "sizes": "192x192"
+                }
+            ]
         },
         {
             "name": "Add Original",
             "short_name": "Original",
             "description": "Quickly add an Original Monster to your daily tracker",
-            "url": "/?quickadd=original"
+            "url": "/?quickadd=original",
+            "icons": [
+                {
+                    "src": "fav.jpg",
+                    "sizes": "192x192"
+                }
+            ]
         },
         {
             "name": "Add Khaotic",
             "short_name": "Khaotic",
             "description": "Quickly add a Khaotic to your daily tracker",
-            "url": "/?quickadd=khaotic"
+            "url": "/?quickadd=khaotic",
+            "icons": [
+                {
+                    "src": "fav.jpg",
+                    "sizes": "192x192"
+                }
+            ]
         }
     ]
 }
