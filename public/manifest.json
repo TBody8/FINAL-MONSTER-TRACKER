@@ -14,13 +14,25 @@
     "background_color": "#000000",
     "shortcuts": [
         {
+            "name": "Add Ultra White",
+            "short_name": "Ultra White",
+            "description": "Quickly add a Zero Ultra to your daily tracker",
+            "url": "/?quickadd=zero-ultra",
+            "icons": [
+                {
+                    "src": "fav-white.jpg",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
             "name": "Add Mango Loco",
             "short_name": "Mango Loco",
             "description": "Quickly add a Mango Loco to your daily tracker",
             "url": "/?quickadd=mango-loco",
             "icons": [
                 {
-                    "src": "fav.jpg",
+                    "src": "fav-mango.jpg",
                     "sizes": "192x192"
                 }
             ]
@@ -32,19 +44,7 @@
             "url": "/?quickadd=original",
             "icons": [
                 {
-                    "src": "fav.jpg",
-                    "sizes": "192x192"
-                }
-            ]
-        },
-        {
-            "name": "Add Khaotic",
-            "short_name": "Khaotic",
-            "description": "Quickly add a Khaotic to your daily tracker",
-            "url": "/?quickadd=khaotic",
-            "icons": [
-                {
-                    "src": "fav.jpg",
+                    "src": "fav-original.jpg",
                     "sizes": "192x192"
                 }
             ]
