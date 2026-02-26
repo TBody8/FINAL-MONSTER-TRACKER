@@ -170,12 +170,6 @@ async def update_settings(settings: Settings):
         logging.error(f"Error updating settings: {str(e)}")
         raise HTTPException(status_code=500, detail="Error updating settings")
 
-# Montar archivos estáticos
-static_dir = ROOT_DIR / "static"
-if not static_dir.exists():
-    static_dir.mkdir(parents=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
 # Include the router
 app.include_router(api_router)
 app.include_router(auth_router)
@@ -188,6 +182,26 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+from fastapi.responses import FileResponse
+
+# Serve static files and SPA fallback
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    # Attempt to find the file in the React build folder
+    build_dir = ROOT_DIR.parent / "build"
+    file_path = build_dir / full_path
+
+    # If it's a direct request to a file (like CSS, JS, images)
+    if file_path.is_file():
+        return FileResponse(file_path)
+    
+    # Fallback to index.html for React Router
+    index_path = build_dir / "index.html"
+    if index_path.is_file():
+        return FileResponse(index_path)
+        
+    raise HTTPException(status_code=404, detail="File not found")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
