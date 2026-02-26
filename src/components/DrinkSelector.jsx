@@ -9,12 +9,35 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
 
-const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [] }) => {
+const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = null, autoOpenModal = false, standalone = false }) => {
   const [selectedDrink, setSelectedDrink] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [currentDrink, setCurrentDrink] = useState(null);
   const [customPrice, setCustomPrice] = useState('');
+  const [swiperInstance, setSwiperInstance] = useState(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  React.useEffect(() => {
+    if (initialDrinkId && swiperInstance && !hasInitialized) {
+      const index = mockData.monsterDrinks.findIndex(d => 
+        d.id === initialDrinkId || 
+        d.name.toLowerCase().replace(/ /g, '-') === initialDrinkId || 
+        d.name.toLowerCase().includes(initialDrinkId.replace(/-/g, ' '))
+      );
+      if (index !== -1) {
+        swiperInstance.slideTo(index, 0); // 0ms transition for instant jump
+        if (autoOpenModal) {
+          setTimeout(() => {
+            setCurrentDrink(mockData.monsterDrinks[index]);
+            setCustomPrice(mockData.monsterDrinks[index].defaultPrice.toString());
+            setShowPriceModal(true);
+          }, 500);
+        }
+        setHasInitialized(true);
+      }
+    }
+  }, [initialDrinkId, swiperInstance, autoOpenModal, hasInitialized]);
 
   const handleDrinkClick = async (drink) => {
     setCurrentDrink(drink);
@@ -57,7 +80,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [] }) => {
   return (
     <>
       <motion.div
-        className='bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-8 border border-green-500/20 hover:border-green-500/40 transition-all duration-500'
+        className={standalone ? '' : 'bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-8 border border-green-500/20 hover:border-green-500/40 transition-all duration-500'}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -82,6 +105,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [] }) => {
         </div>
 
         <Swiper
+          onSwiper={setSwiperInstance}
           effect='coverflow'
           grabCursor={true}
           centeredSlides={true}

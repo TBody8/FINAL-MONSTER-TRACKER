@@ -1,0 +1,35 @@
+{
+    "short_name": "Monster Tracker",
+    "name": "Monster Energy Tracker",
+    "icons": [
+        {
+            "src": "fav.jpg",
+            "sizes": "192x192 512x512",
+            "type": "image/jpeg"
+        }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#000000",
+    "background_color": "#000000",
+    "shortcuts": [
+        {
+            "name": "Add Mango Loco",
+            "short_name": "Mango Loco",
+            "description": "Quickly add a Mango Loco to your daily tracker",
+            "url": "/?quickadd=mango-loco"
+        },
+        {
+            "name": "Add Original",
+            "short_name": "Original",
+            "description": "Quickly add an Original Monster to your daily tracker",
+            "url": "/?quickadd=original"
+        },
+        {
+            "name": "Add Khaotic",
+            "short_name": "Khaotic",
+            "description": "Quickly add a Khaotic to your daily tracker",
+            "url": "/?quickadd=khaotic"
+        }
+    ]
+}
