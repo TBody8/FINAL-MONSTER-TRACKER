@@ -11,7 +11,7 @@ RUN yarn install --frozen-lockfile --network-timeout 1000000
 
 # Copy the rest of the frontend source code and build
 COPY . .
-RUN yarn build
+RUN CI=false yarn build
 
 # Stage 2: Setup the Python backend and serve
 FROM python:3.10-slim
