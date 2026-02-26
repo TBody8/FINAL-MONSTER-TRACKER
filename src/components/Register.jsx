@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 function Register({ onRegister, onSwitchToLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -57,13 +59,22 @@ function Register({ onRegister, onSwitchToLogin }) {
         </div>
         <div className='mb-6'>
           <label className='block mb-1'>Password</label>
-          <input
-            type='password'
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className='w-full p-2 rounded bg-gray-800 border border-gray-700 focus:outline-none'
-            required
-          />
+          <div className='relative'>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className='w-full p-2 pr-10 rounded bg-gray-800 border border-gray-700 focus:outline-none'
+              required
+            />
+            <button
+              type='button'
+              onClick={() => setShowPassword(!showPassword)}
+              className='absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none'
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
         </div>
         <button
           type='submit'
