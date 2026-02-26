@@ -7,7 +7,7 @@ RUN corepack enable && corepack prepare yarn@1.22.22 --activate
 
 # Copy dependency files
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --network-timeout 1000000
 
 # Copy the rest of the frontend source code and build
 COPY . .
