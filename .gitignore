@@ -30,7 +30,6 @@ venv/
 env/
 .env/
 bin/
-lib/
 share/
 include/
 /backend/venv
