@@ -48,14 +48,15 @@ function App() {
     }
     setUser({ username: localStorage.getItem('monsterTrackerUser') });
     // Fetch consumption, goals, settings
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
     Promise.all([
-      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/consumption`, {
+      fetch(`${backendUrl}/api/consumption`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => (res.ok ? res.json() : [])),
-      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/goals`, {
+      fetch(`${backendUrl}/api/goals`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => (res.ok ? res.json() : {})),
-      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/settings`, {
+      fetch(`${backendUrl}/api/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => (res.ok ? res.json() : {})),
     ])
@@ -91,7 +92,8 @@ function App() {
     (day) => {
       if (!token || !user) return;
       const dayWithUser = { ...day, username: user.username };
-      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/consumption`, {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+      fetch(`${backendUrl}/api/consumption`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +266,8 @@ function App() {
       
       if (updatedDrinks.length === 0) {
         // Option A: Delete from backend
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/consumption/${today}`, {
+        const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+        fetch(`${backendUrl}/api/consumption/${today}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         }).catch(err => console.error("Error deleting empty day:", err));
@@ -310,7 +313,8 @@ function App() {
   const handleGoalsUpdate = (newGoals) => {
     setGoals(newGoals);
     // No localStorage
-    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/goals`, {
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+    fetch(`${backendUrl}/api/goals`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -323,7 +327,8 @@ function App() {
   const handleSettingsUpdate = (newSettings) => {
     setSettings(newSettings);
     // No localStorage
-    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/settings`, {
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+    fetch(`${backendUrl}/api/settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

@@ -9,7 +9,8 @@ function Login({ onLogin, onSwitchToRegister }) {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
