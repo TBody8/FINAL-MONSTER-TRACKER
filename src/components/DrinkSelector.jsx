@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, EffectCoverflow } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Zap, Flame, Sparkles, DollarSign } from 'lucide-react';
+import { Plus, Zap, Flame, Sparkles, Euro } from 'lucide-react';
 import * as mockData from '../data/mockData';
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -174,8 +174,8 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                         animate={{ scale: 1, rotate: 0 }}
                         transition={{ delay: 0.3 + index * 0.1, duration: 0.4 }}
                       >
-                        <DollarSign className='w-3 h-3' />
                         {drink.defaultPrice}
+                        <Euro className='w-3 h-3 ml-0.5' />
                       </motion.div>
                     </div>
                     {selectedDrink?.id === drink.id && (
@@ -346,10 +346,10 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
               <div className='space-y-4'>
                 <div>
                   <label className='block text-white font-semibold mb-2 monster-subtitle'>
-                    Price ($)
+                    Price (€)
                   </label>
                   <div className='relative'>
-                    <DollarSign className='absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400' />
+                    <Euro className='absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400' />
                     <input
                       type='number'
                       step='0.01'
@@ -362,7 +362,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                     />
                   </div>
                   <p className='text-sm text-gray-400 mt-1'>
-                    Default price: ${currentDrink.defaultPrice}
+                    Default price: {currentDrink.defaultPrice} €
                   </p>
                 </div>
 

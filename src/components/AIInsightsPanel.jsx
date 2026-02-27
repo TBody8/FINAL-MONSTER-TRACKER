@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   Lightbulb,
   Zap,
-  DollarSign,
+  Euro,
 } from 'lucide-react';
 import { useAIInsights, detectConsumptionAnomalies } from '../utils/aiInsights';
 
@@ -105,14 +105,14 @@ const AIInsightsPanel = memo(
               transition={{ duration: 0.4, delay: 0.3 }}
             >
               <div className='flex items-center gap-2 mb-2'>
-                <DollarSign className='w-4 h-4 text-green-400' />
+                <Euro className='w-4 h-4 text-green-400' />
                 <span className='text-xs text-gray-400'>Avg Cost/Drink</span>
               </div>
               <p className='text-lg font-bold text-white'>
-                ${insights.patterns.spendingHabits.averagePerDrink}
+                {insights.patterns.spendingHabits.averagePerDrink} €
               </p>
               <p className='text-xs text-gray-500'>
-                ${insights.patterns.spendingHabits.monthlyProjection}/month
+                {insights.patterns.spendingHabits.monthlyProjection} €/month
               </p>
             </motion.div>
 

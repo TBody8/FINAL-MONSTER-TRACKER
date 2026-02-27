@@ -12,7 +12,7 @@ import {
   Flame,
   Trash2,
   X,
-  DollarSign,
+  Euro,
   ShoppingCart,
 } from 'lucide-react';
 import {
@@ -519,12 +519,12 @@ const Dashboard = React.memo(
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ duration: 0.2 }}
               >
-                <DollarSign className='w-6 h-6 text-black' />
+                <Euro className='w-6 h-6 text-black' />
               </motion.div>
               <h3 className='text-sm font-semibold text-white'>Money Spent</h3>
             </div>
             <p className='text-2xl font-bold text-emerald-400'>
-              ${memoizedStats.totalCost.toFixed(2)}
+              {memoizedStats.totalCost.toFixed(2)} €
             </p>
             <p className='text-xs text-gray-400 mt-1'>total invested</p>
           </motion.div>
@@ -743,7 +743,7 @@ const Dashboard = React.memo(
                               {drinkData?.caffeine}mg caffeine
                             </p>
                             <p className='text-yellow-400'>
-                              ${drink.price?.toFixed(2) || '0.00'}
+                              {drink.price?.toFixed(2) || '0.00'} €
                             </p>
                           </div>
                         </div>
