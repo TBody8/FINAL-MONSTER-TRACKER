@@ -9,7 +9,7 @@ export const monsterDrinks = [
     calories: 210,
     sugar: 54,
     size: "16 fl oz",
-    image: "https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=300&h=400&fit=crop",
+    image: "/monster-images/monster-original.jpg",
     category: "Original",
     color: "#00ff41",
     defaultPrice: 1.80
@@ -21,7 +21,7 @@ export const monsterDrinks = [
     calories: 10,
     sugar: 0,
     size: "16 fl oz",
-    image: "https://images.unsplash.com/photo-1634693654243-a4f03785cba4?w=300&h=400&fit=crop",
+    image: "/monster-images/monster-white.jpg",
     category: "Zero Sugar",
     color: "#ffffff",
     defaultPrice: 1.80
@@ -33,7 +33,7 @@ export const monsterDrinks = [
     calories: 25,
     sugar: 6,
     size: "15.5 fl oz",
-    image: "https://images.pexels.com/photos/9170100/pexels-photo-9170100.jpeg?w=300&h=400&fit=crop",
+    image: "/monster-images/monster-mangoloco.jpg",
     category: "Juice",
     color: "#ffff00",
     defaultPrice: 1.80
