@@ -9,7 +9,7 @@ export const monsterDrinks = [
     calories: 210,
     sugar: 54,
     size: "16 fl oz",
-    image: "/monster-images/monster-original.jpg",
+    image: "/monster-images/monster-original.webp",
     category: "Original",
     color: "#00ff41",
     defaultPrice: 1.80
@@ -21,7 +21,7 @@ export const monsterDrinks = [
     calories: 10,
     sugar: 0,
     size: "16 fl oz",
-    image: "/monster-images/monster-white.jpg",
+    image: "/monster-images/monster-white.webp",
     category: "Zero Sugar",
     color: "#ffffff",
     defaultPrice: 1.80
@@ -33,7 +33,7 @@ export const monsterDrinks = [
     calories: 25,
     sugar: 6,
     size: "15.5 fl oz",
-    image: "/monster-images/monster-mangoloco.jpg",
+    image: "/monster-images/monster-mangoloco.webp",
     category: "Juice",
     color: "#ffff00",
     defaultPrice: 1.80
