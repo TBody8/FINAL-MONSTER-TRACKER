@@ -3,18 +3,6 @@
 // Arreglo para que el id sea string (por compatibilidad con backend)
 export const monsterDrinks = [
   {
-    id: "1",
-    name: "Monster Energy Original",
-    caffeine: 160,
-    calories: 210,
-    sugar: 54,
-    size: "16 fl oz",
-    image: "/monster-images/monster-original.webp",
-    category: "Original",
-    color: "#00ff41",
-    defaultPrice: 1.80
-  },
-  {
     id: "2",
     name: "Monster Energy Zero Ultra",
     caffeine: 140,
@@ -39,13 +27,37 @@ export const monsterDrinks = [
     defaultPrice: 1.80
   },
   {
+    id: "1",
+    name: "Monster Energy Original",
+    caffeine: 160,
+    calories: 210,
+    sugar: 54,
+    size: "16 fl oz",
+    image: "/monster-images/monster-original.webp",
+    category: "Original",
+    color: "#00ff41",
+    defaultPrice: 1.80
+  },
+  {
+    id: "7",
+    name: "Monster Energy Ultra Rosa",
+    caffeine: 150,
+    calories: 10,
+    sugar: 0,
+    size: "16 fl oz",
+    image: "/monster-images/monster-rosa.webp",
+    category: "Ultra",
+    color: "#ff66cc",
+    defaultPrice: 1.80
+  },
+  {
     id: "4",
     name: "Monster Energy Pipeline Punch",
     caffeine: 160,
     calories: 210,
     sugar: 51,
     size: "16 fl oz",
-    image: "https://imgs.search.brave.com/ENKjhYDZSJoKAxhFgkLni9VIbgnJLdGHo6T_eg9J5M4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tLm1l/ZGlhLWFtYXpvbi5j/b20vaW1hZ2VzL1Mv/YXBsdXMtbWVkaWEt/bGlicmFyeS1zZXJ2/aWNlLW1lZGlhLzBh/ZGU2NTJiLTAyNjUt/NGYxYS04NDAwLTVk/NGQ1MTk5MTA5My5f/X0NSMCwxMTQsNjcy/LDUwNF9QVDBfU1gz/MDBfVjFfX18uanBn",
+    image: "/monster-images/monster-punch.webp",
     category: "Juice",
     color: "#ff6b35",
     defaultPrice: 1.80
@@ -57,7 +69,7 @@ export const monsterDrinks = [
     calories: 10,
     sugar: 0,
     size: "16 fl oz",
-    image: "https://imgs.search.brave.com/rB2CHhOlDadSD5ocbbR9G-sQo4U890e-Ifp8FsqPkkU/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLmVi/YXlpbWcuY29tL2lt/YWdlcy9nL0FTWUFB/T1N3Znp0bkZwYUMv/cy1sMTYwMC5qcGc",
+    image: "/monster-images/monster-red.webp",
     category: "Ultra",
     color: "#ff0000",
     defaultPrice: 1.80
@@ -69,9 +81,21 @@ export const monsterDrinks = [
     calories: 10,
     sugar: 0,
     size: "16 fl oz",
-    image: "https://imgs.search.brave.com/rMS0kLki-imZuhMuquZpKvJ3ssFAUGLHIcadmAq06FE/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90YXJn/ZXQuc2NlbmU3LmNv/bS9pcy9pbWFnZS9U/YXJnZXQvR1VFU1Rf/YTYwN2U4MmMtNWQ2/MC00MjgzLTgyNTIt/NzA0OGUyODM4NjU3/P3dpZD04MDAmaGVp/PTgwMCZxbHQ9ODAm/Zm10PXBqcGVn",
+    image: "/monster-images/monster-paradise.webp",
     category: "Ultra",
     color: "#00ffff",
+    defaultPrice: 1.80
+  },
+  {
+    id: "8",
+    name: "Monster Energy Ultra Gold",
+    caffeine: 150,
+    calories: 10,
+    sugar: 0,
+    size: "16 fl oz",
+    image: "/monster-images/monster-gold.webp",
+    category: "Ultra",
+    color: "#ffd700",
     defaultPrice: 1.80
   }
 ];
