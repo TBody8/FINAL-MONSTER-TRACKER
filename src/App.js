@@ -128,8 +128,8 @@ function App() {
 
   const handleDrinkSelect = useCallback(
     (drink) => {
-      const today = new Date().toISOString().split('T')[0];
-      const todayData = consumptionData.find((d) => d.date === today);
+      const targetDate = drink.date || new Date().toISOString().split('T')[0];
+      const targetData = consumptionData.find((d) => d.date === targetDate);
 
       // Ensure we don't add negative caffeine values
       const safeCaffeineAmount = Math.max(0, drink.caffeine || 0);
@@ -142,9 +142,9 @@ function App() {
         timestamp: new Date().toISOString(),
       };
 
-      if (todayData) {
+      if (targetData) {
         const updatedData = consumptionData.map((d) =>
-          d.date === today
+          d.date === targetDate
             ? {
                 ...d,
                 drinks: [...d.drinks, drinkWithPrice],
@@ -157,28 +157,29 @@ function App() {
             : d
         );
         setConsumptionData(updatedData);
-        saveConsumptionDay(updatedData.find((d) => d.date === today));
+        saveConsumptionDay(updatedData.find((d) => d.date === targetDate));
       } else {
         const newData = [
           ...consumptionData,
           {
-            date: today,
+            date: targetDate,
             drinks: [drinkWithPrice],
             totalCaffeine: safeCaffeineAmount,
             totalCost: drinkPrice,
           },
         ];
+        newData.sort((a, b) => new Date(b.date) - new Date(a.date));
         setConsumptionData(newData);
-        saveConsumptionDay(newData.find((d) => d.date === today));
+        saveConsumptionDay(newData.find((d) => d.date === targetDate));
       }
 
       setSelectedDrinks((prev) => [...prev, drink]);
 
-      // Check for limit warnings
-      if (goals.enableNotifications && goals.enableDailyLimit) {
+      // Check for limit warnings 
+      if (goals.enableNotifications && goals.enableDailyLimit && targetDate === new Date().toISOString().split('T')[0]) {
         const currentCaffeineToday = Math.max(
           0,
-          (todayData?.totalCaffeine || 0) + safeCaffeineAmount
+          (targetData?.totalCaffeine || 0) + safeCaffeineAmount
         );
         const percentage = (currentCaffeineToday / goals.dailyLimit) * 100;
 

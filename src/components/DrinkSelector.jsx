@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, EffectCoverflow } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Zap, Flame, Sparkles, Euro } from 'lucide-react';
+import { Plus, Zap, Flame, Sparkles, Euro, Calendar } from 'lucide-react';
 import * as mockData from '../data/mockData';
+import CustomCalendar from './CustomCalendar';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -17,6 +18,8 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
   const [customPrice, setCustomPrice] = useState('');
   const [swiperInstance, setSwiperInstance] = useState(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   React.useEffect(() => {
     if (initialDrinkId && swiperInstance && !hasInitialized) {
@@ -42,6 +45,8 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
   const handleDrinkClick = async (drink) => {
     setCurrentDrink(drink);
     setCustomPrice(drink.defaultPrice.toString());
+    setSelectedDate(new Date().toISOString().split('T')[0]);
+    setShowCalendar(false);
     setShowPriceModal(true);
   };
 
@@ -58,6 +63,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
     const drinkWithPrice = {
       ...currentDrink,
       selectedPrice: customPrice === '' ? currentDrink.defaultPrice : parseFloat(customPrice),
+      date: selectedDate,
     };
 
     onDrinkSelect(drinkWithPrice);
@@ -68,6 +74,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
       setIsLoading(false);
       setCurrentDrink(null);
       setCustomPrice('');
+      setShowCalendar(false);
     }, 300);
   };
 
@@ -75,6 +82,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
     setShowPriceModal(false);
     setCurrentDrink(null);
     setCustomPrice('');
+    setShowCalendar(false);
   };
 
   return (
@@ -125,6 +133,14 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
           modules={[EffectCoverflow, Pagination, Navigation]}
           className='monster-swiper'
           speed={800}
+          preventClicks={true}
+          preventClicksPropagation={true}
+          onClick={(swiper, event) => {
+            if (swiper.clickedIndex !== undefined && swiper.clickedIndex !== null && !swiper.animating) {
+              const drink = mockData.monsterDrinks[swiper.clickedIndex];
+              if (drink) handleDrinkClick(drink);
+            }
+          }}
         >
           {mockData.monsterDrinks.map((drink, index) => (
             <SwiperSlide key={drink.id} className='!w-[280px] md:!w-80'>
@@ -145,7 +161,6 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                   transition: { duration: 0.3 },
                 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => handleDrinkClick(drink)}
               >
                 <div className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 md:p-6 border border-green-500/30 hover:border-green-500/60 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/20'>
                   <div className='relative overflow-hidden rounded-lg mb-4'>
@@ -320,12 +335,17 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
         {showPriceModal && currentDrink && (
           <motion.div
             className='fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4'
+            onClick={cancelSelection}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
               className='bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border border-green-500/20'
+              onClick={(e) => {
+                e.stopPropagation();
+                if (showCalendar) setShowCalendar(false);
+              }}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -361,9 +381,34 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                       autoFocus
                     />
                   </div>
-                  <p className='text-sm text-gray-400 mt-1'>
-                    Default price: {currentDrink.defaultPrice} €
-                  </p>
+                  <div className='flex items-center justify-between mt-1'>
+                    <p className='text-sm text-gray-400'>
+                      Default price: {currentDrink.defaultPrice} €
+                    </p>
+                    <div className='relative'>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowCalendar(!showCalendar);
+                        }}
+                        className='flex items-center gap-1.5 px-2 py-1 bg-gray-700/50 hover:bg-gray-700 text-green-400 text-xs font-semibold rounded-md border border-gray-600 hover:border-green-500/50 transition-colors'
+                      >
+                        <Calendar className='w-3 h-3' />
+                        {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : selectedDate}
+                      </button>
+                      <AnimatePresence>
+                        {showCalendar && (
+                          <div className='absolute right-0 top-full mt-2'>
+                            <CustomCalendar 
+                              selectedDate={selectedDate}
+                              onSelectDate={setSelectedDate}
+                              onClose={() => setShowCalendar(false)}
+                            />
+                          </div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
 
                 <div className='flex gap-3 mt-6'>
