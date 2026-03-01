@@ -76,14 +76,25 @@ const CustomCalendar = ({ selectedDate, onSelectDate, onClose }) => {
   const isNextDisabled = currentYear === today.getFullYear() && currentMonth === today.getMonth();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-      transition={{ duration: 0.2 }}
-      className="absolute z-50 mt-2 bg-gray-800 border border-green-500/30 rounded-xl shadow-2xl overflow-hidden w-72"
-      onClick={(e) => e.stopPropagation()}
+    <motion.div 
+      className="absolute inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 left-0 top-0"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClose) onClose();
+      }}
     >
+      {/* Calendar Container */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className="bg-gray-800 border border-green-500/30 rounded-xl shadow-2xl overflow-hidden w-72 max-w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-b border-green-500/20">
         <button 
           onClick={handlePrevMonth}
@@ -173,6 +184,7 @@ const CustomCalendar = ({ selectedDate, onSelectDate, onClose }) => {
           Go to Today
         </button>
       </div>
+      </motion.div>
     </motion.div>
   );
 };

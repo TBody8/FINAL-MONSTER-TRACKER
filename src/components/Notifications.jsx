@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, X, Flame } from 'lucide-react';
 
 const Notifications = ({ notifications, onDismiss }) => {
   useEffect(() => {
@@ -21,6 +21,8 @@ const Notifications = ({ notifications, onDismiss }) => {
         return <CheckCircle className="w-5 h-5" />;
       case 'info':
         return <Info className="w-5 h-5" />;
+      case 'wrapped':
+        return <Flame className="w-5 h-5 text-yellow-300" />;
       default:
         return <Info className="w-5 h-5" />;
     }
@@ -34,6 +36,8 @@ const Notifications = ({ notifications, onDismiss }) => {
         return 'from-green-500/20 to-emerald-500/20 border-green-500/30 text-green-400';
       case 'info':
         return 'from-blue-500/20 to-cyan-500/20 border-blue-500/30 text-blue-400';
+      case 'wrapped':
+        return 'from-yellow-400/20 to-yellow-200/10 border-yellow-300/40 text-yellow-200';
       default:
         return 'from-gray-500/20 to-gray-600/20 border-gray-500/30 text-gray-400';
     }

@@ -75,6 +75,8 @@ const Dashboard = React.memo(
     selectedDrinks,
   }) => {
     const [chartView, setChartView] = useState('daily');
+    const [chartMonthOffset, setChartMonthOffset] = useState(0);
+    const [selectedChartDate, setSelectedChartDate] = useState(null);
     const [todayQuote, setTodayQuote] = useState('');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [deletingDrink, setDeletingDrink] = useState(null);
@@ -132,7 +134,7 @@ const Dashboard = React.memo(
     );
 
     const handleDeleteDrink = React.useCallback(
-      async (drinkIndex) => {
+      async (drinkIndex, specificDate = null) => {
         setDeletingDrink(drinkIndex);
 
         // Add smooth animation delay
@@ -149,8 +151,8 @@ const Dashboard = React.memo(
 
     // Memoize chart data to prevent unnecessary recalculations
     const chartData_full = React.useMemo(
-      () => mockData.getChartData(consumptionData, chartView),
-      [consumptionData, chartView]
+      () => mockData.getChartData(consumptionData, chartView, chartMonthOffset),
+      [consumptionData, chartView, chartMonthOffset]
     );
 
     const chartData = React.useMemo(
@@ -183,6 +185,18 @@ const Dashboard = React.memo(
       () => ({
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (event, elements, chart) => {
+          if (chartView !== 'daily') return;
+          if (!elements || elements.length === 0) return;
+          
+          const element = elements[0];
+          const dataIndex = element.index;
+          const chartDataEntry = chartData_full[dataIndex];
+          
+          if (chartDataEntry && chartDataEntry.date) {
+            setSelectedChartDate(chartDataEntry.date);
+          }
+        },
         interaction: {
           intersect: false,
           mode: 'index',
@@ -192,16 +206,7 @@ const Dashboard = React.memo(
             display: false,
           },
           title: {
-            display: true,
-            text: `${
-              chartView === 'daily' ? 'Daily' : 'Annual'
-            } Monster Consumption`,
-            color: '#ffffff',
-            font: {
-              size: 20,
-              weight: 'bold',
-              family: 'Teko, sans-serif',
-            },
+            display: false,
           },
           tooltip: {
             backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -614,39 +619,76 @@ const Dashboard = React.memo(
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7, ease: 'easeOut' }}
         >
-          <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4'>
-            <h3 className='text-2xl font-bold text-white monster-title'>
-              Consumption Analytics
-            </h3>
-            <div className='flex gap-2'>
-              <motion.button
-                onClick={() => handleChartViewChange('daily')}
-                className={`px-4 py-2 rounded-lg transition-all duration-300 monster-subtitle ${
-                  chartView === 'daily'
-                    ? 'bg-green-500 text-black shadow-lg'
-                    : 'bg-gray-700 text-white hover:bg-gray-600 hover:scale-105'
-                }`}
-                whileHover={{ scale: chartView !== 'daily' ? 1.05 : 1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Daily
-              </motion.button>
-              <motion.button
-                onClick={() => handleChartViewChange('annual')}
-                className={`px-4 py-2 rounded-lg transition-all duration-300 monster-subtitle ${
-                  chartView === 'annual'
-                    ? 'bg-green-500 text-black shadow-lg'
-                    : 'bg-gray-700 text-white hover:bg-gray-600 hover:scale-105'
-                }`}
-                whileHover={{ scale: chartView !== 'annual' ? 1.05 : 1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Annual
-              </motion.button>
+          <div className='flex flex-col items-start mb-6 gap-4'>
+            <div className='flex flex-col sm:flex-row justify-between w-full items-start sm:items-center gap-4'>
+              <h3 className='text-2xl font-bold text-white monster-title'>
+                Consumption Analytics
+              </h3>
+            </div>
+
+            <div className='flex flex-col items-start gap-4'>
+              <div className='flex gap-2'>
+                <motion.button
+                  onClick={() => handleChartViewChange('daily')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-300 monster-subtitle ${
+                    chartView === 'daily'
+                      ? 'bg-green-500 text-black shadow-lg'
+                      : 'bg-gray-700 text-white hover:bg-gray-600 hover:scale-105'
+                  }`}
+                  whileHover={{ scale: chartView !== 'daily' ? 1.05 : 1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Daily
+                </motion.button>
+                <motion.button
+                  onClick={() => handleChartViewChange('annual')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-300 monster-subtitle ${
+                    chartView === 'annual'
+                      ? 'bg-green-500 text-black shadow-lg'
+                      : 'bg-gray-700 text-white hover:bg-gray-600 hover:scale-105'
+                  }`}
+                  whileHover={{ scale: chartView !== 'annual' ? 1.05 : 1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Annual
+                </motion.button>
+              </div>
+              
+              {chartView === 'daily' && (
+                <div className='flex items-center justify-center gap-3 bg-gray-800/80 rounded-lg px-3 py-1.5 border border-green-500/20'>
+                  <button
+                    onClick={() => {
+                        setChartMonthOffset(prev => prev - 1);
+                        setSelectedChartDate(null);
+                    }}
+                    className='p-1 hover:bg-gray-700 rounded-md text-gray-400 hover:text-green-400 transition-colors'
+                  >
+                    <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M15 19l-7-7 7-7'></path></svg>
+                  </button>
+                  
+                  <span className='text-sm font-semibold text-green-50 min-w-24 text-center tracking-wide'>
+                    {(() => {
+                      const d = new Date();
+                      d.setMonth(d.getMonth() + chartMonthOffset);
+                      return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                    })()}
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                        setChartMonthOffset(prev => prev + 1);
+                        setSelectedChartDate(null);
+                    }}
+                    className='p-1 hover:bg-gray-700 rounded-md text-gray-400 hover:text-green-400 transition-colors'
+                  >
+                    <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M9 5l7 7-7 7'></path></svg>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className='h-96 relative'>
+          <div className='h-64 sm:h-80 md:h-96 relative'>
             <AnimatePresence mode='wait'>
               {!isTransitioning && (
                 <motion.div
@@ -678,119 +720,159 @@ const Dashboard = React.memo(
           </div>
         </motion.div>
 
-        {/* Today's Drinks - Enhanced with Delete Functionality */}
-        {todayData.drinks.length > 0 && (
-          <motion.div
-            className='bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-4 md:p-8 border border-green-500/20'
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8, ease: 'easeOut' }}
-          >
-            <div className='flex items-center justify-between mb-6'>
-              <h3 className='text-2xl font-bold text-white monster-title'>
-                Today's Monsters
-              </h3>
-              <p className='text-gray-400 text-sm'>Hover to remove drinks</p>
-            </div>
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-              <AnimatePresence>
-                {todayData.drinks.map((drink, index) => {
-                  const drinkData = mockData.monsterDrinks.find(
-                    (d) => d.id === drink.id
-                  );
-                  const isDeleting = deletingDrink === index;
+        {/* Dynamic Drinks Details - Shows Today or Selected Chart Date */}
+        {(() => {
+          const displayDate = selectedChartDate || new Date().toISOString().split('T')[0];
+          const isViewingPast = !!selectedChartDate && selectedChartDate !== new Date().toISOString().split('T')[0];
+          const displayData = consumptionData.find(d => d.date === displayDate) || { drinks: [] };
+          
+          if (displayData.drinks.length === 0 && !isViewingPast) return null;
 
-                  return (
-                    <motion.div
-                      key={`${drink.id}-${index}`}
-                      className='relative group'
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{
-                        opacity: 0,
-                        x: -100,
-                        scale: 0.8,
-                        transition: { duration: 0.3 },
-                      }}
-                      transition={{
-                        duration: 0.5,
-                        delay: index * 0.1,
-                        ease: 'easeOut',
-                      }}
-                      layout
-                    >
-                      <div
-                        className={`flex items-center gap-4 bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-all duration-300 ${
-                          isDeleting
-                            ? 'bg-red-900/50 border border-red-500/50'
-                            : ''
-                        }`}
-                      >
-                        <motion.img
-                          src={drinkData?.image}
-                          alt={drinkData?.name}
-                          className='w-12 h-12 rounded object-cover'
-                          whileHover={{ scale: 1.1 }}
-                          transition={{ duration: 0.2 }}
-                          loading='lazy'
-                        />
-                        <div className='flex-1'>
-                          <p className='text-white font-semibold'>
-                            {drinkData?.name}
-                          </p>
-                          <div className='flex items-center gap-4 text-sm'>
-                            <p className='text-green-400'>
-                              {drinkData?.caffeine}mg caffeine
-                            </p>
-                            <p className='text-yellow-400'>
-                              {drink.price?.toFixed(2) || '0.00'} €
-                            </p>
-                          </div>
-                        </div>
+          return (
+            <motion.div
+              key={displayDate} // Force re-animation when date changes
+              className='bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-4 md:p-8 border border-green-500/20'
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              <div className='flex flex-col items-center justify-center mb-6 gap-2'>
+                {isViewingPast ? (
+                  <div className='text-center'>
+                    <h3 className='text-xl md:text-2xl font-bold text-white tracking-wider'>
+                      CONSUMPTION ON
+                    </h3>
+                    <h4 className='text-lg md:text-xl font-bold text-green-400'>
+                      {new Date(displayDate).toLocaleDateString()}
+                    </h4>
+                  </div>
+                ) : (
+                  <div className='flex items-center justify-between w-full'>
+                    <h3 className='text-2xl font-bold text-white monster-title'>
+                      Today's Monsters
+                    </h3>
+                    <p className='text-gray-400 text-sm hidden sm:block'>Hover to remove drinks</p>
+                  </div>
+                )}
+              </div>
 
-                        {/* Delete Button */}
-                        <motion.button
-                          onClick={() => handleDeleteDrink(index)}
-                          className='opacity-0 group-hover:opacity-100 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200'
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          disabled={isDeleting}
-                          title='Remove this drink'
+              {displayData.drinks.length === 0 ? (
+                <p className="text-gray-400 italic text-center py-6">No drinks logged for this date.</p>
+              ) : (
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  <AnimatePresence>
+                    {displayData.drinks.map((drink, index) => {
+                      const drinkData = mockData.monsterDrinks.find(
+                        (d) => d.id === drink.id
+                      );
+                      const isDeleting = deletingDrink === index;
+
+                      return (
+                        <motion.div
+                          key={`${drink.id}-${index}-${displayDate}`}
+                          className='relative group'
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{
+                            opacity: 0,
+                            x: -100,
+                            scale: 0.8,
+                            transition: { duration: 0.3 },
+                          }}
+                          transition={{
+                            duration: 0.5,
+                            delay: index * 0.1,
+                            ease: 'easeOut',
+                          }}
+                          layout
                         >
-                          {isDeleting ? (
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{
-                                duration: 1,
-                                repeat: Infinity,
-                                ease: 'linear',
-                              }}
-                            >
-                              <X className='w-4 h-4' />
-                            </motion.div>
-                          ) : (
-                            <Trash2 className='w-4 h-4' />
-                          )}
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
+                          <div
+                            className={`flex items-center gap-4 bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-all duration-300 ${
+                              isDeleting
+                                ? 'bg-red-900/50 border border-red-500/50'
+                                : ''
+                            }`}
+                          >
+                            <motion.img
+                              src={drinkData?.image}
+                              alt={drinkData?.name}
+                              className='w-12 h-12 rounded object-cover'
+                              whileHover={{ scale: 1.1 }}
+                              transition={{ duration: 0.2 }}
+                              loading='lazy'
+                            />
+                            <div className='flex-1'>
+                              <p className='text-white font-semibold'>
+                                {drinkData?.name}
+                              </p>
+                              <div className='flex items-center gap-4 text-sm'>
+                                <p className='text-green-400'>
+                                  {drinkData?.caffeine}mg caffeine
+                                </p>
+                                <p className='text-emerald-400'>
+                                  {drink.price?.toFixed(2) || '0.00'} €
+                                </p>
+                              </div>
+                            </div>
 
-            {todayData.drinks.length === 0 && (
-              <motion.p
-                className='text-gray-500 text-center py-8 italic'
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                No monsters consumed today. Start tracking your energy!
-              </motion.p>
-            )}
-          </motion.div>
-        )}
+                            {/* Delete Button */}
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if(typeof onDrinkDelete === 'function') {
+                                  onDrinkDelete(index, displayDate);
+                                } else {
+                                  handleDeleteDrink(index, displayDate);
+                                }
+                              }}
+                              className='opacity-0 group-hover:opacity-100 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200'
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              disabled={isDeleting}
+                              title='Remove this drink'
+                            >
+                              {isDeleting ? (
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{
+                                    duration: 1,
+                                    repeat: Infinity,
+                                    ease: 'linear',
+                                  }}
+                                >
+                                  <X className='w-4 h-4' />
+                                </motion.div>
+                              ) : (
+                                <Trash2 className='w-4 h-4' />
+                              )}
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Return to Today Button (Only shows when viewing past) */}
+              {isViewingPast && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={() => {
+                      setSelectedChartDate(null);
+                      setChartMonthOffset(0);
+                    }}
+                    className="flex items-center gap-2 px-6 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 hover:border-green-500 rounded-full text-sm font-medium text-white transition-all duration-300"
+                  >
+                    <X className="w-4 h-4 text-green-400" />
+                    Return to Today
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          );
+        })()}
+        {/* Track Drink Section - Moved below Today's Monsters */}
 
         {/* Track Drink Section - Moved below Today's Monsters */}
         <motion.div

@@ -14,6 +14,10 @@ const Settings = lazy(() => import('./components/Settings'));
 const Notifications = lazy(() => import('./components/Notifications'));
 const Login = lazy(() => import('./components/Login'));
 const Register = lazy(() => import('./components/Register'));
+const MonsterWrapped = lazy(() => import('./components/MonsterWrapped'));
+const Leaderboard = lazy(() => import('./components/Leaderboard'));
+const KingsAura = lazy(() => import('./components/KingsAura'));
+const UpdateModal = lazy(() => import('./components/UpdateModal'));
 
 function App() {
   const [consumptionData, setConsumptionData] = useState([]);
@@ -31,9 +35,20 @@ function App() {
   );
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [userRank, setUserRank] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showHamburger, setShowHamburger] = useState(false);
   const [activeIAModal, setActiveIAModal] = useState(null); // 'anomaly' | 'streak' | 'partyMeter' | null
+  const [showWrapped, setShowWrapped] = useState(false);
+  // Wrapped Activation Logic
+  const checkIsWrappedActive = () => {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+    // Active if it's the last 2 days of a month, or the first 2 days of a month
+    return now.getDate() >= lastDay.getDate() - 2 || now.getDate() <= 2;
+  };
+  const isWrappedActive = checkIsWrappedActive();
   const [userProfile, setUserProfile] = useState(() => {
     const sex = localStorage.getItem('partyMeterSex');
     const weight = localStorage.getItem('partyMeterWeight');
@@ -59,19 +74,60 @@ function App() {
       fetch(`${backendUrl}/api/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => (res.ok ? res.json() : {})),
+      fetch(`${backendUrl}/api/leaderboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => (res.ok ? res.json() : [])),
     ])
-      .then(([consumption, goals, settings]) => {
+      .then(([consumption, goals, settings, leaderboard]) => {
         setConsumptionData(consumption);
         setGoals(goals);
         setSettings(settings);
+
+        const currentUsername = localStorage.getItem('monsterTrackerUser');
+        if (leaderboard && leaderboard.length > 0 && currentUsername) {
+          const uIndex = leaderboard.findIndex((u) => u.username === currentUsername);
+          setUserRank(uIndex !== -1 ? uIndex + 1 : null);
+        } else {
+          setUserRank(null);
+        }
+
         setInitialLoading(false);
         setLoading(false);
+
+        // Check for App Updates (v2.1)
+        const updateKey = 'monsterTracker_v2_1_seen';
+        if (!localStorage.getItem(updateKey)) {
+          setTimeout(() => {
+            setShowUpdateModal(true);
+            localStorage.setItem(updateKey, 'true');
+          }, 1500); // Slight delay after login/load
+        }
+
+        // Notify user about Monster Wrapped if active and not notified this month
+        if (isWrappedActive) {
+          const now = new Date();
+          const notifiedKey = `wrappedNotified_${now.getFullYear()}_${now.getMonth()}`;
+          if (!localStorage.getItem(notifiedKey)) {
+            // Set it synchronously to prevent StrictMode double execution
+            localStorage.setItem(notifiedKey, 'true');
+            // Using a short timeout to ensure Notification component is mounted
+            setTimeout(() => {
+              setNotifications(prev => [...prev, {
+                id: Date.now(),
+                type: 'wrapped',
+                title: 'Your Monster Wrapped is Ready!',
+                message: 'Open the menu to view your monthly survival report.',
+                autoHide: false,
+              }]);
+            }, 1000);
+          }
+        }
       })
       .catch(() => {
         setInitialLoading(false);
         setLoading(false);
       });
-  }, [token]);
+  }, [token, isWrappedActive]);
 
   const handleLogin = (jwt, userObj) => {
     setToken(jwt);
@@ -220,14 +276,14 @@ function App() {
   );
 
   const handleDrinkDelete = useCallback(
-    (drinkIndex) => {
-      const today = new Date().toISOString().split('T')[0];
-      const todayData = consumptionData.find((d) => d.date === today);
+    (drinkIndex, targetDate = null) => {
+      const dateStr = targetDate || new Date().toISOString().split('T')[0];
+      const targetData = consumptionData.find((d) => d.date === dateStr);
 
-      if (!todayData || !todayData.drinks[drinkIndex]) return;
+      if (!targetData || !targetData.drinks[drinkIndex]) return;
 
       // Get the drink being deleted para notificación
-      const deletedDrink = todayData.drinks[drinkIndex];
+      const deletedDrink = targetData.drinks[drinkIndex];
       const deletedDrinkData = mockData.monsterDrinks.find(
         (d) => d.id === deletedDrink.id
       );
@@ -235,24 +291,24 @@ function App() {
       const deletedPrice = deletedDrink.price || 0;
 
       // Remove the drink and update totals
-      const updatedDrinks = todayData.drinks.filter(
+      const updatedDrinks = targetData.drinks.filter(
         (_, index) => index !== drinkIndex
       );
       const updatedCaffeine = Math.max(
         0,
-        todayData.totalCaffeine - deletedCaffeine
+        targetData.totalCaffeine - deletedCaffeine
       );
       const updatedCost = Math.max(
         0,
-        (todayData.totalCost || 0) - deletedPrice
+        (targetData.totalCost || 0) - deletedPrice
       );
 
       let updatedData;
       if (updatedDrinks.length === 0) {
-        updatedData = consumptionData.filter((d) => d.date !== today);
+        updatedData = consumptionData.filter((d) => d.date !== dateStr);
       } else {
         updatedData = consumptionData.map((d) =>
-          d.date === today
+          d.date === dateStr
             ? {
                 ...d,
                 drinks: updatedDrinks,
@@ -268,12 +324,12 @@ function App() {
       if (updatedDrinks.length === 0) {
         // Option A: Delete from backend
         const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-        fetch(`${backendUrl}/api/consumption/${today}`, {
+        fetch(`${backendUrl}/api/consumption/${dateStr}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         }).catch(err => console.error("Error deleting empty day:", err));
       } else {
-        saveConsumptionDay(updatedData.find((d) => d.date === today));
+        saveConsumptionDay(updatedData.find((d) => d.date === dateStr));
       }
 
       // Update selected drinks for today
@@ -410,6 +466,11 @@ function App() {
             transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
           />
         </div>
+        {userRank === 1 && (
+          <Suspense fallback={null}>
+            <KingsAura />
+          </Suspense>
+        )}
       </div>
 
       {/* Notifications */}
@@ -430,7 +491,7 @@ function App() {
         <div className='max-w-7xl mx-auto flex justify-between items-center'>
           <motion.div className='flex flex-col items-start'>
             <motion.h1
-              className='monster-title text-4xl md:text-6xl bg-gradient-to-r from-green-300 via-green-400 to-green-500 bg-clip-text text-transparent'
+              className='monster-title text-4xl md:text-6xl lg:text-7xl bg-gradient-to-r from-green-300 via-green-400 to-green-500 bg-clip-text text-transparent whitespace-nowrap'
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
               animate={{
@@ -446,14 +507,28 @@ function App() {
             >
               Monster Tracker
             </motion.h1>
+            
             <motion.p
-              className='monster-subtitle text-sm md:text-base text-green-400/80 -mt-1'
+              className='monster-subtitle text-sm md:text-lg text-green-400/80 whitespace-nowrap mt-1'
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               Unleash Your Energy Data
             </motion.p>
+            
+            {userRank !== null && userRank <= 3 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className={`mt-3 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg border-2 font-black text-lg md:text-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] 
+                  ${userRank === 1 ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.5)]' : 
+                    userRank === 2 ? 'bg-gray-300/20 border-gray-300 text-gray-200' : 'bg-amber-700/30 border-amber-600 text-amber-500'}
+                `}
+              >
+                {userRank}º
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Desktop Navigation */}
@@ -510,9 +585,13 @@ function App() {
           settings={settings}
           onSettingsUpdate={handleSettingsUpdate}
         />
+        <UpdateModal 
+          isOpen={showUpdateModal}
+          onClose={() => setShowUpdateModal(false)}
+        />
       </Suspense>
 
-      {/* IA Modals */}
+      {/* IA Modals & Leaderboard */}
       {activeIAModal === 'partyMeter' && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/80'>
           <div className='w-full max-w-lg mx-auto relative'>
@@ -530,11 +609,22 @@ function App() {
           </div>
         </div>
       )}
+
+      {activeIAModal === 'leaderboard' && (
+        <Suspense fallback={<Loader />}>
+          <Leaderboard 
+            token={token} 
+            onClose={() => setActiveIAModal(null)} 
+          />
+        </Suspense>
+      )}
       <button
-        className={`fixed top-6 right-6 p-3 border border-green-500/30 rounded-full shadow-lg transition-all duration-300 bg-gray-900/80 md:hidden ${
+        className={`fixed top-6 right-6 p-3 border rounded-full shadow-lg transition-all duration-300 md:hidden z-10 ${
           showHamburger || showSettings || activeIAModal === 'partyMeter'
-            ? 'backdrop-blur-sm brightness-75 scale-95'
-            : ''
+            ? 'backdrop-blur-sm brightness-75 scale-95 border-green-500/30 bg-gray-900/80'
+            : isWrappedActive
+              ? 'bg-yellow-500/10 border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-slow-pulse'
+              : 'border-green-500/30 bg-gray-900/80'
         }`}
         onClick={() => {
           if (
@@ -544,7 +634,7 @@ function App() {
           }
         }}
         aria-label='Abrir menú'
-        style={{ display: 'flex', alignItems: 'center', zIndex: 10 }} // z-10 para que quede debajo del modal (z-50)
+        style={{ display: 'flex', alignItems: 'center' }} // z-10 for below modal
         disabled={
           showHamburger || showSettings || activeIAModal === 'partyMeter'
         }
@@ -554,17 +644,30 @@ function App() {
       <HamburgerMenu
         open={showHamburger}
         onClose={() => setShowHamburger(false)}
+        isWrappedActive={isWrappedActive}
         onSelect={(key) => {
           if (key === 'settings') {
             setShowSettings(true);
           } else if (key === 'logout') {
             handleLogout();
+          } else if (key === 'wrapped') {
+            setShowWrapped(true);
           } else {
             setActiveIAModal(key);
           }
           setShowHamburger(false);
         }}
       />
+      
+      {/* Monster Wrapped Modal */}
+      {showWrapped && (
+        <Suspense fallback={<Loader />}>
+          <MonsterWrapped 
+            consumptionData={consumptionData} 
+            onClose={() => setShowWrapped(false)} 
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

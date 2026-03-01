@@ -133,14 +133,8 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
           modules={[EffectCoverflow, Pagination, Navigation]}
           className='monster-swiper'
           speed={800}
-          preventClicks={true}
-          preventClicksPropagation={true}
-          onClick={(swiper, event) => {
-            if (swiper.clickedIndex !== undefined && swiper.clickedIndex !== null && !swiper.animating) {
-              const drink = mockData.monsterDrinks[swiper.clickedIndex];
-              if (drink) handleDrinkClick(drink);
-            }
-          }}
+          preventClicks={false}
+          preventClicksPropagation={false}
         >
           {mockData.monsterDrinks.map((drink, index) => (
             <SwiperSlide key={drink.id} className='!w-[280px] md:!w-80'>
@@ -148,6 +142,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                 className={`relative group cursor-pointer transform transition-all duration-500 ${
                   selectedDrink?.id === drink.id ? 'scale-105' : ''
                 }`}
+                onClick={() => handleDrinkClick(drink)}
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
@@ -256,13 +251,17 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                   >
                     <span className='text-gray-400'>{drink.size}</span>
                     <motion.button
-                      className='bg-green-500 hover:bg-green-600 text-black font-bold px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 monster-subtitle'
+                      className='bg-green-500 hover:bg-green-600 text-black font-bold px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 monster-subtitle relative z-10'
                       whileHover={{
                         scale: 1.05,
                         boxShadow: '0 0 20px rgba(0, 255, 65, 0.5)',
                       }}
                       whileTap={{ scale: 0.95 }}
                       disabled={isLoading && selectedDrink?.id === drink.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDrinkClick(drink);
+                      }}
                     >
                       {isLoading && selectedDrink?.id === drink.id ? (
                         <motion.div
@@ -396,17 +395,6 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                         <Calendar className='w-3 h-3' />
                         {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : selectedDate}
                       </button>
-                      <AnimatePresence>
-                        {showCalendar && (
-                          <div className='absolute right-0 top-full mt-2'>
-                            <CustomCalendar 
-                              selectedDate={selectedDate}
-                              onSelectDate={setSelectedDate}
-                              onClose={() => setShowCalendar(false)}
-                            />
-                          </div>
-                        )}
-                      </AnimatePresence>
                     </div>
                   </div>
                 </div>
@@ -432,6 +420,16 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                 </div>
               </div>
             </motion.div>
+
+            <AnimatePresence>
+              {showCalendar && (
+                <CustomCalendar 
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  onClose={() => setShowCalendar(false)}
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

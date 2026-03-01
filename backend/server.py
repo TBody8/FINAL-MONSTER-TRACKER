@@ -9,9 +9,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from auth import router as auth_router
 from dependencies import get_current_username
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +28,12 @@ users_collection = db["users"]
 consumption_collection = db["consumption"]
 goals_collection = db["goals"]
 settings_collection = db["settings"]
+
+# Leaderboard Cache
+leaderboard_cache = {
+    "data": None,
+    "last_updated": None
+}
 
 # Define Models
 class DrinkItem(BaseModel):
@@ -169,6 +176,105 @@ async def update_settings(settings: Settings):
     except Exception as e:
         logging.error(f"Error updating settings: {str(e)}")
         raise HTTPException(status_code=500, detail="Error updating settings")
+
+# RUTA DE LEADERBOARD RANKEDS
+@api_router.get("/leaderboard")
+async def get_leaderboard():
+    global leaderboard_cache
+    
+    # Check if cache is valid (updated today)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    if leaderboard_cache["data"] is not None and leaderboard_cache["last_updated"] == today_str:
+        return leaderboard_cache["data"]
+        
+    try:
+        pipeline = [
+            {"$match": {"username": {"$ne": "diego"}}},
+            {"$group": {
+                "_id": "$username",
+                "totalCaffeine": {"$sum": {"$toDouble": {"$ifNull": ["$totalCaffeine", 0]}}},
+                "allDrinksArrays": {"$push": "$drinks"}
+            }},
+            {"$unwind": "$allDrinksArrays"},
+            {"$unwind": "$allDrinksArrays"},
+            {"$group": {
+                "_id": {
+                    "username": "$_id",
+                    "drinkId": "$allDrinksArrays.id"
+                },
+                "drinkCount": {"$sum": 1},
+                "totalCaffeine": {"$first": "$totalCaffeine"},
+                "spentOnDrink": {"$sum": {"$toDouble": {"$ifNull": ["$allDrinksArrays.price", {"$ifNull": ["$allDrinksArrays.defaultPrice", 0]}]}}}
+            }},
+            {"$sort": {"drinkCount": -1}},
+            {"$group": {
+                "_id": "$_id.username",
+                "totalDrinksCount": {"$sum": "$drinkCount"},
+                "totalSpent": {"$sum": "$spentOnDrink"},
+                "favoriteDrinkId": {"$first": "$_id.drinkId"},
+                "totalCaffeine": {"$first": "$totalCaffeine"}
+            }},
+            {"$project": {
+                "username": "$_id",
+                "totalDrinksCount": 1,
+                "totalSpent": 1,
+                "favoriteDrinkId": 1,
+                "totalCaffeine": 1,
+                "_id": 0
+            }},
+            {"$sort": {"totalDrinksCount": -1}}
+        ]
+        
+        cursor = consumption_collection.aggregate(pipeline)
+        leaderboard_data = await cursor.to_list(length=100)
+        
+        # Calculate streaks
+        dates_pipeline = [
+            {"$match": {"username": {"$ne": "diego"}}},
+            {"$group": {
+                "_id": "$username",
+                "dates": {"$push": "$date"}
+            }}
+        ]
+        dates_cursor = consumption_collection.aggregate(dates_pipeline)
+        dates_data = await dates_cursor.to_list(length=100)
+        
+        user_streaks = {}
+        for user_dates in dates_data:
+            username = user_dates["_id"]
+            try:
+                dates = sorted([datetime.strptime(d, "%Y-%m-%d") for d in user_dates.get("dates", [])])
+            except:
+                dates = []
+                
+            max_streak = 0
+            current_streak = 0
+            for i in range(len(dates)):
+                if i == 0:
+                    current_streak = 1
+                else:
+                    diff = (dates[i] - dates[i-1]).days
+                    if diff == 1:
+                        current_streak += 1
+                    elif diff > 1:
+                        current_streak = 1
+                if current_streak > max_streak:
+                    max_streak = current_streak
+            user_streaks[username] = max_streak
+            
+        # Merge maxStreak into leaderboard data
+        for user in leaderboard_data:
+            user["maxStreak"] = user_streaks.get(user.get("username"), 0)
+        
+        # Update Cache
+        leaderboard_cache["data"] = leaderboard_data
+        leaderboard_cache["last_updated"] = today_str
+        
+        return leaderboard_data
+        
+    except Exception as e:
+        logging.error(f"Error generating leaderboard: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating leaderboard")
 
 # Include the router
 app.include_router(api_router)

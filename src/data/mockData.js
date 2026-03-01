@@ -266,18 +266,30 @@ export const sanitizeChartData = (data) => {
 };
 
 // Helper function to get data for charts with full time period
-export const getChartData = (consumptionData, viewType = 'daily') => {
+export const getChartData = (consumptionData, viewType = 'daily', monthOffset = 0) => {
   const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
+  
+  // Apply month offset accurately (handles going back across years)
+  let targetYear = currentDate.getFullYear();
+  let targetMonth = currentDate.getMonth() + monthOffset;
+  
+  // Normalize the month/year if offset pushes it out of the 0-11 bounds
+  while (targetMonth < 0) {
+    targetMonth += 12;
+    targetYear -= 1;
+  }
+  while (targetMonth > 11) {
+    targetMonth -= 12;
+    targetYear += 1;
+  }
   
   if (viewType === 'daily') {
-    // Get all days in current month (1 to 28/30/31)
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    // Get all days in target month (1 to 28/30/31)
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
     const fullMonthData = [];
     
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayData = consumptionData.find(d => d.date === dateStr);
       
       fullMonthData.push({
@@ -296,11 +308,11 @@ export const getChartData = (consumptionData, viewType = 'daily') => {
     const annualData = [];
     
     for (let month = 0; month < 12; month++) {
-      const daysInThisMonth = new Date(currentYear, month + 1, 0).getDate();
+      const daysInThisMonth = new Date(targetYear, month + 1, 0).getDate();
       
       const monthData = consumptionData.filter(d => {
         const date = new Date(d.date);
-        return date.getFullYear() === currentYear && date.getMonth() === month;
+        return date.getFullYear() === targetYear && date.getMonth() === month;
       });
       
       const totalDrinks = monthData.reduce((sum, d) => sum + d.drinks.length, 0);
