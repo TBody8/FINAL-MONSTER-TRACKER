@@ -159,4 +159,15 @@ code {
   .custom-scrollbar {
     will-change: scroll-position;
   }
+
+  /* Swiper 3D Hitbox Fix */
+  .monster-swiper .swiper-slide {
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  .monster-swiper .swiper-slide-active {
+    z-index: 20 !important;
+    pointer-events: auto !important;
+  }
 }

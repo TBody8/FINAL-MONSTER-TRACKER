@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,13 +6,14 @@ from fastapi.staticfiles import StaticFiles
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, date, timedelta
 from auth import router as auth_router
 from dependencies import get_current_username
 import asyncio
+import random
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,6 +22,17 @@ from database import client, db
 
 print("MONGO_URI:", os.environ.get("MONGO_URI"))
 app = FastAPI()
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:;"
+    return response
+
 api_router = APIRouter(prefix="/api")
 
 # Define MongoDB collections
@@ -35,28 +47,36 @@ leaderboard_cache = {
     "last_updated": None
 }
 
+PROTECTED_IPS = ["192.168.1.51", "127.0.0.1", "localhost", "::1"]
+
 # Define Models
 class DrinkItem(BaseModel):
-    id: str
-    price: float
-    timestamp: Optional[str] = None
+    id: StrictStr = Field(..., max_length=50)
+    price: float = Field(..., ge=0, le=6.0)
+    timestamp: Optional[StrictStr] = Field(None, max_length=50)
 
 class ConsumptionData(BaseModel):
-    date: str  # Formato YYYY-MM-DD
+    date: StrictStr = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")  # Formato YYYY-MM-DD
     drinks: List[DrinkItem]
-    totalCaffeine: float
-    totalCost: float
-    username: str = Field(...)
+    totalCaffeine: float = Field(..., ge=0)
+    totalCost: float = Field(..., ge=0)
+    username: StrictStr = Field(..., max_length=50)
+    spam_trigger: Optional[bool] = False
 
 class Goals(BaseModel):
     enableDailyLimit: bool
-    dailyLimit: float
-    limitType: str
+    dailyLimit: float = Field(..., ge=0)
+    limitType: StrictStr = Field(..., max_length=20)
     enableNotifications: bool
 
 class Settings(BaseModel):
-    darkModeContrast: str
-    animationIntensity: str
+    theme: StrictStr = Field(..., max_length=20)
+    currency: StrictStr = Field(..., max_length=10)
+    # PartyMeter Profile
+    partyMeterSex: Optional[StrictStr] = Field(None, max_length=10)
+    partyMeterWeight: Optional[StrictStr] = Field(None, max_length=10)
+    darkModeContrast: StrictStr = Field(..., max_length=20)
+    animationIntensity: StrictStr = Field(..., max_length=20)
     reducedMotion: bool
     autoRefresh: bool
     showAdvancedStats: bool
@@ -73,9 +93,49 @@ async def get_consumption_data(username: str = Depends(get_current_username)):
         logging.error(f"Error fetching consumption data: {str(e)}")
         raise HTTPException(status_code=500, detail="Error fetching data")
 
+from fastapi import Request
+
 @api_router.post("/consumption", response_model=ConsumptionData)
-async def add_consumption(data: ConsumptionData, username: str = Depends(get_current_username)):
+async def add_consumption(data: ConsumptionData, request: Request, username: str = Depends(get_current_username)):
     global leaderboard_cache
+    
+    client_ip = request.client.host
+    is_protected_ip = client_ip in PROTECTED_IPS
+    is_developer = (username == "diego")
+    
+    # Check block status
+    db_user = await users_collection.find_one({"username": username})
+    if db_user and db_user.get("ban_until"):
+        ban_until = db_user.get("ban_until")
+        if isinstance(ban_until, str):
+            ban_until = datetime.fromisoformat(ban_until)
+        if datetime.utcnow() < ban_until and not is_developer:
+            raise HTTPException(status_code=403, detail={"message": "Tu cuenta está temporal o permanentemente suspendida.", "ban_until": ban_until.isoformat()})
+
+    # Spam Detection (Fast Follow-up Penalty from Frontend)
+    is_spam = getattr(data, 'spam_trigger', False)
+
+    if is_spam:
+        anti_cheat_mode = os.environ.get("ANTI_CHEAT_MODE", "live").lower()
+        ban_time = datetime.utcnow() + timedelta(hours=12)
+        
+        # Erase the fraudulent consumption day entirely from MongoDB
+        try:
+            await consumption_collection.delete_one({"date": data.date, "username": username})
+            leaderboard_cache["data"] = None
+            leaderboard_cache["last_updated"] = None
+            print(f"[Anti-Cheat] Borrado día fraudulento {data.date} para usuario {username}")
+        except Exception as e:
+            logging.error(f"Error erasing fraudulent consumption: {str(e)}")
+
+        if anti_cheat_mode == "live" and not is_protected_ip and not is_developer:
+            await users_collection.update_one(
+                {"username": username},
+                {"$set": {"ban_until": ban_time.isoformat()}}
+            )
+        
+        raise HTTPException(status_code=429, detail={"message": "too_many_requests_ban", "ban_until": ban_time.isoformat()})
+
     try:
         # LOG: Mostrar los datos recibidos y el usuario
         print("[POST /consumption] Data recibida:", data.dict())
@@ -124,9 +184,9 @@ async def delete_consumption(date: str, username: str = Depends(get_current_user
         raise HTTPException(status_code=500, detail="Error deleting data")
 
 @api_router.get("/goals", response_model=Goals)
-async def get_goals():
+async def get_goals(username: str = Depends(get_current_username)):
     try:
-        goals = await goals_collection.find_one({})
+        goals = await goals_collection.find_one({"username": username})
         if not goals:
             # Return default goals if none exist
             default_goals = Goals(
@@ -135,7 +195,9 @@ async def get_goals():
                 limitType="daily",
                 enableNotifications=True
             )
-            await goals_collection.insert_one(default_goals.dict())
+            goals_dict = default_goals.dict()
+            goals_dict["username"] = username
+            await goals_collection.insert_one(goals_dict)
             return default_goals
         return Goals(**goals)
     except Exception as e:
@@ -143,11 +205,13 @@ async def get_goals():
         raise HTTPException(status_code=500, detail="Error fetching goals")
 
 @api_router.put("/goals", response_model=Goals)
-async def update_goals(goals: Goals):
+async def update_goals(goals: Goals, username: str = Depends(get_current_username)):
     try:
+        goals_dict = goals.dict()
+        goals_dict["username"] = username
         await goals_collection.update_one(
-            {},
-            {"$set": goals.dict()},
+            {"username": username},
+            {"$set": goals_dict},
             upsert=True
         )
         return goals
@@ -156,9 +220,9 @@ async def update_goals(goals: Goals):
         raise HTTPException(status_code=500, detail="Error updating goals")
 
 @api_router.get("/settings", response_model=Settings)
-async def get_settings():
+async def get_settings(username: str = Depends(get_current_username)):
     try:
-        settings = await settings_collection.find_one({})
+        settings = await settings_collection.find_one({"username": username})
         if not settings:
             # Return default settings if none exist
             default_settings = Settings(
@@ -168,7 +232,9 @@ async def get_settings():
                 autoRefresh=True,
                 showAdvancedStats=True
             )
-            await settings_collection.insert_one(default_settings.dict())
+            settings_dict = default_settings.dict()
+            settings_dict["username"] = username
+            await settings_collection.insert_one(settings_dict)
             return default_settings
         return Settings(**settings)
     except Exception as e:
@@ -176,11 +242,13 @@ async def get_settings():
         raise HTTPException(status_code=500, detail="Error fetching settings")
 
 @api_router.put("/settings", response_model=Settings)
-async def update_settings(settings: Settings):
+async def update_settings(settings: Settings, username: str = Depends(get_current_username)):
     try:
+        settings_dict = settings.dict()
+        settings_dict["username"] = username
         await settings_collection.update_one(
-            {},
-            {"$set": settings.dict()},
+            {"username": username},
+            {"$set": settings_dict},
             upsert=True
         )
         return settings
@@ -233,7 +301,9 @@ async def get_leaderboard():
                 "totalCaffeine": 1,
                 "_id": 0
             }},
-            {"$sort": {"totalDrinksCount": -1}}
+            {"$sort": {
+                "totalDrinksCount": -1
+            }}
         ]
         
         cursor = consumption_collection.aggregate(pipeline)
@@ -273,9 +343,22 @@ async def get_leaderboard():
                     max_streak = current_streak
             user_streaks[username] = max_streak
             
-        # Merge maxStreak into leaderboard data
+        # Merge maxStreak into leaderboard data and assign random tiebreaker
         for user in leaderboard_data:
             user["maxStreak"] = user_streaks.get(user.get("username"), 0)
+            user["_random_tiebreaker"] = random.random()
+            
+        # Final Python Sort: totalDrinks(desc), maxStreak(desc), totalSpent(desc), random(desc)
+        leaderboard_data.sort(key=lambda x: (
+            x.get("totalDrinksCount", 0),
+            x.get("maxStreak", 0),
+            x.get("totalSpent", 0),
+            x.get("_random_tiebreaker", 0)
+        ), reverse=True)
+        
+        # Cleanup
+        for user in leaderboard_data:
+            user.pop("_random_tiebreaker", None)
         
         # Update Cache
         leaderboard_cache["data"] = leaderboard_data
@@ -292,9 +375,19 @@ app.include_router(api_router)
 app.include_router(auth_router)
 
 # CORS middleware
+frontend_url = os.environ.get("FRONTEND_URL")
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+if frontend_url:
+    origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

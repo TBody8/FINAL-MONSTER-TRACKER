@@ -15,7 +15,12 @@ function Login({ onLogin, onSwitchToRegister }) {
       const res = await fetch(`${backendUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+        body: JSON.stringify({ 
+          username, 
+          password,
+          mt_uuid_ban: localStorage.getItem('mt_uuid_ban') === 'true' 
+        }),
       });
       const text = await res.text();
       let data;
@@ -25,11 +30,22 @@ function Login({ onLogin, onSwitchToRegister }) {
         throw new Error('Respuesta inesperada del servidor: ' + text);
       }
       if (!res.ok) {
-        throw new Error(data.detail || 'Invalid credentials');
+        throw data.detail;
       }
-      onLogin(data.access_token, data.user);
+      // JWT is now attached as a cookie securely by the backend, just set user state
+      onLogin(data.user);
     } catch (err) {
-      setError(err.message);
+      if (typeof err === 'object' && err !== null && err.message) {
+         setError(err.message);
+         if (err.ban_until || err.message === 'Permaban por tonto' || err.message === 'User is temporarily suspended.') {
+             window.dispatchEvent(new CustomEvent('userBanned', { detail: { message: err.message, ban_until: err.ban_until || null } }));
+         }
+      } else {
+         setError(err.message || String(err));
+         if (err === 'Permaban por tonto') {
+             window.dispatchEvent(new CustomEvent('userBanned', { detail: err })); // Dispatch full err (string)
+         }
+      }
     }
   };
 

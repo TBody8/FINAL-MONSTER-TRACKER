@@ -123,23 +123,23 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
             stretch: 0,
             depth: 100,
             modifier: 1,
-            slideShadows: true,
+            slideShadows: false,
           }}
           pagination={{
             clickable: true,
             dynamicBullets: true,
           }}
-          navigation={true}
-          modules={[EffectCoverflow, Pagination, Navigation]}
+          modules={[EffectCoverflow, Pagination]}
           className='monster-swiper'
           speed={800}
           preventClicks={false}
           preventClicksPropagation={false}
+          threshold={20}
         >
           {mockData.monsterDrinks.map((drink, index) => (
-            <SwiperSlide key={drink.id} className='!w-[280px] md:!w-80'>
+            <SwiperSlide key={drink.id} className='!w-[280px] md:!w-80 !h-auto flex justify-center items-stretch'>
               <motion.div
-                className={`relative group cursor-pointer transform transition-all duration-500 ${
+                className={`!w-full !h-full block relative group cursor-pointer transform transition-all duration-500 ${
                   selectedDrink?.id === drink.id ? 'scale-105' : ''
                 }`}
                 onClick={() => handleDrinkClick(drink)}
@@ -157,7 +157,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <div className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 md:p-6 border border-green-500/30 hover:border-green-500/60 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/20'>
+                <div className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 md:p-6 border border-green-500/30 hover:border-green-500/60 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/20 !w-full !h-full flex flex-col relative'>
                   <div className='relative overflow-hidden rounded-lg mb-4'>
                     <motion.img
                       src={drink.image}
@@ -373,6 +373,7 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                       type='number'
                       step='0.01'
                       min='0'
+                      max='6'
                       value={customPrice}
                       onChange={(e) => setCustomPrice(e.target.value)}
                       className='w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent'
@@ -397,15 +398,24 @@ const DrinkSelector = ({ onDrinkSelect, selectedDrinks = [], initialDrinkId = nu
                       </button>
                     </div>
                   </div>
+                  {parseFloat(customPrice) >= 6.0 && (
+                    <p className="text-red-400 text-xs mt-2 font-bold animate-pulse">
+                      Ni de coña te ha costado eso
+                    </p>
+                  )}
                 </div>
 
                 <div className='flex gap-3 mt-6'>
                   <motion.button
                     onClick={confirmDrinkSelection}
-                    className='flex-1 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-4 rounded-lg transition-colors monster-subtitle'
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    disabled={customPrice === '' || parseFloat(customPrice) < 0}
+                    className={`flex-1 font-bold py-3 px-4 rounded-lg transition-colors monster-subtitle ${
+                      customPrice === '' || parseFloat(customPrice) < 0 || parseFloat(customPrice) > 6.0
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-75'
+                        : 'bg-green-500 hover:bg-green-600 text-black'
+                    }`}
+                    whileHover={customPrice === '' || parseFloat(customPrice) < 0 || parseFloat(customPrice) > 6.0 ? {} : { scale: 1.02 }}
+                    whileTap={customPrice === '' || parseFloat(customPrice) < 0 || parseFloat(customPrice) > 6.0 ? {} : { scale: 0.98 }}
+                    disabled={customPrice === '' || parseFloat(customPrice) < 0 || parseFloat(customPrice) > 6.0}
                   >
                     Add Monster
                   </motion.button>

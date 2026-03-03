@@ -9,15 +9,23 @@ const QuickAdd = ({ drinkId }) => {
   const [status, setStatus] = useState('idle'); // idle, success, error
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('monsterTrackerToken');
-    const storedUser = localStorage.getItem('monsterTrackerUser');
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
     
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser({ username: storedUser });
-    } else {
-      setStatus('error');
-    }
+    // Check if the user has an active HttpOnly session
+    fetch(`${backendUrl}/api/auth/me`, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error('Not authenticated');
+        return res.json();
+      })
+      .then((userData) => {
+        setUser({ username: userData.username });
+        // Set token to true to bypass legacy logic down below temporarily without renaming too fast
+        setToken("secure-cookie-active"); 
+      })
+      .catch((err) => {
+        console.error(err);
+        setStatus('error');
+      });
   }, []);
 
   const handleDrinkSelect = async (drinkWithPrice) => {
@@ -27,7 +35,7 @@ const QuickAdd = ({ drinkId }) => {
       const today = new Date().toISOString().split('T')[0];
       
       const resData = await fetch(`${backendUrl}/api/consumption`, {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include'
       });
       const allData = resData.ok ? await resData.json() : [];
       const todayData = allData.find(d => d.date === today) || {
@@ -57,9 +65,9 @@ const QuickAdd = ({ drinkId }) => {
       const saveRes = await fetch(`${backendUrl}/api/consumption`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(updatedDay)
       });
 

@@ -31,7 +31,7 @@ const RankBadge = ({ rank }) => {
   );
 };
 
-export default function Leaderboard({ onClose, token }) {
+export default function Leaderboard({ onClose }) {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,7 +41,7 @@ export default function Leaderboard({ onClose, token }) {
       try {
         const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
         const res = await fetch(`${backendUrl}/api/leaderboard`, {
-          headers: { Authorization: `Bearer ${token}` }
+          credentials: 'include'
         });
         
         if (!res.ok) throw new Error('Failed to fetch Leaderboard data');
@@ -56,7 +56,7 @@ export default function Leaderboard({ onClose, token }) {
     };
 
     fetchLeaderboard();
-  }, [token]);
+  }, []);
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm'>

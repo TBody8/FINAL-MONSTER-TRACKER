@@ -13,11 +13,18 @@ function Register({ onRegister, onSwitchToLogin }) {
     setError('');
     setSuccess('');
     try {
+      const isBannedLocally = localStorage.getItem('mt_uuid_ban') === 'true';
       const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+      
       const res = await fetch(`${backendUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+        body: JSON.stringify({ 
+          username, 
+          password,
+          mt_uuid_ban: isBannedLocally
+        }),
       });
       const text = await res.text();
       let data;
@@ -27,14 +34,25 @@ function Register({ onRegister, onSwitchToLogin }) {
         throw new Error('Respuesta inesperada del servidor: ' + text);
       }
       if (!res.ok) {
-        throw new Error(data.detail || 'Registration failed');
+        throw data.detail;
       }
       setSuccess('Registration successful! Logging in...');
       setTimeout(() => {
-        onRegister(data.access_token, data.user);
+        // JWT is managed by HttpOnly cookies now
+        onRegister(data.user);
       }, 1000);
     } catch (err) {
-      setError(err.message);
+      if (typeof err === 'object' && err !== null && err.message) {
+         setError(err.message);
+         if (err.ban_until || err.message === 'Permaban por tonto' || err.message === 'User is temporarily suspended.') {
+             window.dispatchEvent(new CustomEvent('userBanned', { detail: { message: err.message, ban_until: err.ban_until || null } }));
+         }
+      } else {
+         setError(err.message || String(err));
+         if (err === 'Permaban por tonto') {
+             window.dispatchEvent(new CustomEvent('userBanned', { detail: err }));
+         }
+      }
     }
   };
 

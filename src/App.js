@@ -7,6 +7,8 @@ import Loader from './components/ui/Loader';
 import PartyMeter from './components/PartyMeter';
 import HamburgerMenu from './components/HamburgerMenu';
 import { detectConsumptionAnomalies, useAIInsights } from './utils/aiInsights';
+import Strike1WarningModal from './components/Strike1WarningModal';
+import BannedScreenModal from './components/BannedScreenModal';
 
 // Lazy load heavy components
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -30,14 +32,13 @@ function App() {
   const [settings, setSettings] = useState({});
 
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(
-    localStorage.getItem('monsterTrackerToken') || ''
-  );
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [userRank, setUserRank] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showStrike1Warning, setShowStrike1Warning] = useState(false);
+  const [bannedState, setBannedState] = useState(null);
   const [showHamburger, setShowHamburger] = useState(false);
   const [activeIAModal, setActiveIAModal] = useState(null); // 'anomaly' | 'streak' | 'partyMeter' | null
   const [showWrapped, setShowWrapped] = useState(false);
@@ -56,98 +57,118 @@ function App() {
   });
 
   useEffect(() => {
-    if (!token) {
+    const handleBanned = (e) => {
+      if (e.detail && e.detail.message) {
+          setBannedState({
+            type: 'perma',
+            message: e.detail.message,
+            ban_until: e.detail.ban_until
+          });
+      } else if (typeof e.detail === 'string') {
+          setBannedState({
+            type: 'perma',
+            message: e.detail,
+            ban_until: null
+          });
+      }
+    };
+    window.addEventListener('userBanned', handleBanned);
+    return () => window.removeEventListener('userBanned', handleBanned);
+  }, []);
+
+  const fetchUserData = useCallback((username) => {
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+    return Promise.all([
+      fetch(`${backendUrl}/api/consumption`, { credentials: 'include' }).then((res) => (res.ok ? res.json() : [])),
+      fetch(`${backendUrl}/api/goals`, { credentials: 'include' }).then((res) => (res.ok ? res.json() : {})),
+      fetch(`${backendUrl}/api/settings`, { credentials: 'include' }).then((res) => (res.ok ? res.json() : {})),
+      fetch(`${backendUrl}/api/leaderboard`, { credentials: 'include' }).then((res) => (res.ok ? res.json() : [])),
+    ]).then(([consumption, goals, settings, leaderboard]) => {
+      setConsumptionData(consumption);
+      setGoals(goals);
+      setSettings(settings);
+
+      if (leaderboard && leaderboard.length > 0 && username) {
+        const uIndex = leaderboard.findIndex((u) => u.username === username);
+        setUserRank(uIndex !== -1 ? uIndex + 1 : null);
+      } else {
+        setUserRank(null);
+      }
+
       setInitialLoading(false);
       setLoading(false);
-      return;
-    }
-    setUser({ username: localStorage.getItem('monsterTrackerUser') });
-    // Fetch consumption, goals, settings
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-    Promise.all([
-      fetch(`${backendUrl}/api/consumption`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => (res.ok ? res.json() : [])),
-      fetch(`${backendUrl}/api/goals`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => (res.ok ? res.json() : {})),
-      fetch(`${backendUrl}/api/settings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => (res.ok ? res.json() : {})),
-      fetch(`${backendUrl}/api/leaderboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => (res.ok ? res.json() : [])),
-    ])
-      .then(([consumption, goals, settings, leaderboard]) => {
-        setConsumptionData(consumption);
-        setGoals(goals);
-        setSettings(settings);
 
-        const currentUsername = localStorage.getItem('monsterTrackerUser');
-        if (leaderboard && leaderboard.length > 0 && currentUsername) {
-          const uIndex = leaderboard.findIndex((u) => u.username === currentUsername);
-          setUserRank(uIndex !== -1 ? uIndex + 1 : null);
-        } else {
-          setUserRank(null);
-        }
+      // Check for App Updates (v2.1)
+      const updateKey = 'monsterTracker_v2_1_seen';
+      if (!localStorage.getItem(updateKey)) {
+        setTimeout(() => {
+          setShowUpdateModal(true);
+          localStorage.setItem(updateKey, 'true');
+        }, 1500);
+      }
 
-        setInitialLoading(false);
-        setLoading(false);
-
-        // Check for App Updates (v2.1)
-        const updateKey = 'monsterTracker_v2_1_seen';
-        if (!localStorage.getItem(updateKey)) {
+      // Notify user about Monster Wrapped
+      if (isWrappedActive) {
+        const now = new Date();
+        const notifiedKey = `wrappedNotified_${now.getFullYear()}_${now.getMonth()}`;
+        if (!localStorage.getItem(notifiedKey)) {
+          localStorage.setItem(notifiedKey, 'true');
           setTimeout(() => {
-            setShowUpdateModal(true);
-            localStorage.setItem(updateKey, 'true');
-          }, 1500); // Slight delay after login/load
+            setNotifications(prev => [...prev, {
+              id: Date.now(),
+              message: "¡Tu Monster Wrapped Mensual está listo! 🎉"
+            }]);
+          }, 2000);
         }
+      }
+    });
+  }, [isWrappedActive]);
 
-        // Notify user about Monster Wrapped if active and not notified this month
-        if (isWrappedActive) {
-          const now = new Date();
-          const notifiedKey = `wrappedNotified_${now.getFullYear()}_${now.getMonth()}`;
-          if (!localStorage.getItem(notifiedKey)) {
-            // Set it synchronously to prevent StrictMode double execution
-            localStorage.setItem(notifiedKey, 'true');
-            // Using a short timeout to ensure Notification component is mounted
-            setTimeout(() => {
-              setNotifications(prev => [...prev, {
-                id: Date.now(),
-                type: 'wrapped',
-                title: 'Your Monster Wrapped is Ready!',
-                message: 'Open the menu to view your monthly survival report.',
-                autoHide: false,
-              }]);
-            }, 1000);
-          }
-        }
+  useEffect(() => {
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+    
+    // Check if the user has an active HttpOnly session
+    fetch(`${backendUrl}/api/auth/me`, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error('Not authenticated');
+        return res.json();
+      })
+      .then((userData) => {
+        setUser({ username: userData.username });
+        fetchUserData(userData.username);
       })
       .catch(() => {
+        // No active session cookie
+        setUser(null);
         setInitialLoading(false);
         setLoading(false);
       });
-  }, [token, isWrappedActive]);
+  }, [fetchUserData]);
 
-  const handleLogin = (jwt, userObj) => {
-    setToken(jwt);
+  const handleLogin = (userObj) => {
     setUser(userObj);
-    localStorage.setItem('monsterTrackerToken', jwt);
     localStorage.setItem('monsterTrackerUser', userObj.username);
+    setLoading(true);
+    fetchUserData(userObj.username);
   };
 
   const handleLogout = () => {
-    setToken('');
-    setUser(null);
-    localStorage.removeItem('monsterTrackerToken');
-    localStorage.removeItem('monsterTrackerUser');
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+    fetch(`${backendUrl}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+    }).then(() => {
+        setUser(null);
+        setConsumptionData([]);
+        localStorage.removeItem('monsterTrackerUser');
+    }).catch(err => console.error(err));
   };
 
   const refreshUserRank = useCallback(() => {
-    if (!token) return;
+    if (!user) return;
     const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
     fetch(`${backendUrl}/api/leaderboard`, {
-      headers: { Authorization: `Bearer ${token}` }
+      credentials: 'include'
     })
       .then(res => res.ok ? res.json() : [])
       .then(leaderboard => {
@@ -160,23 +181,50 @@ function App() {
         }
       })
       .catch(err => console.error("Error refreshing rank:", err));
-  }, [token]);
+  }, [user]);
 
   // Guardar solo el día modificado
   const saveConsumptionDay = useCallback(
     (day) => {
-      if (!token || !user) return;
+      if (!user) return;
       const dayWithUser = { ...day, username: user.username };
       const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
       fetch(`${backendUrl}/api/consumption`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(dayWithUser),
       })
         .then((res) => {
+          if (res.status === 429) {
+            localStorage.setItem('mt_uuid_ban', 'true');
+            handleLogout();
+            res.json().then(errorData => {
+                setBannedState({
+                  type: 'kick',
+                  message: errorData.detail?.message || 'Has sido bloqueado temporalmente por spam.',
+                  ban_until: errorData.detail?.ban_until || null
+                });
+            }).catch(() => {
+                setBannedState({ type: 'kick', message: 'Has sido bloqueado temporalmente por spam.', ban_until: null });
+            });
+            throw new Error('too_many_requests_ban');
+          }
+          if (res.status === 403) {
+             handleLogout();
+             res.json().then(errorData => {
+                 setBannedState({
+                   type: 'perma',
+                   message: errorData.detail?.message || (typeof errorData.detail === 'string' ? errorData.detail : 'Tu cuenta está temporal o permanentemente suspendida.'),
+                   ban_until: errorData.detail?.ban_until || null
+                 });
+             }).catch(() => {
+                 setBannedState({ type: 'perma', message: 'Tu cuenta está temporal o permanentemente suspendida.', ban_until: null });
+             });
+            throw new Error('banned');
+          }
           if (!res.ok) {
             console.error(
               '[FRONTEND] Error al guardar consumo:',
@@ -195,7 +243,7 @@ function App() {
           console.error('[FRONTEND] Error de red al guardar consumo:', err);
         });
     },
-    [token, user, refreshUserRank]
+    [user, refreshUserRank]
   );
 
   const handleDrinkSelect = useCallback(
@@ -203,90 +251,80 @@ function App() {
       const targetDate = drink.date || new Date().toISOString().split('T')[0];
       const targetData = consumptionData.find((d) => d.date === targetDate);
 
-      // Ensure we don't add negative caffeine values
+      let isSpamTriggered = false;
+      const dismissTime = parseInt(localStorage.getItem('strike1_dismiss_time') || '0', 10);
+      
+      if (dismissTime > 0) {
+        if (Date.now() - dismissTime <= 5000) {
+          let postClicks = parseInt(localStorage.getItem('post_strike_clicks') || '0', 10);
+          postClicks += 1;
+          localStorage.setItem('post_strike_clicks', postClicks.toString());
+          
+          if (postClicks >= 2) { 
+            isSpamTriggered = true;
+          }
+        } else {
+          localStorage.removeItem('strike1_dismiss_time');
+          localStorage.removeItem('post_strike_clicks');
+        }
+      }
+
       const safeCaffeineAmount = Math.max(0, drink.caffeine || 0);
       const drinkPrice = drink.selectedPrice !== undefined ? drink.selectedPrice : (drink.defaultPrice || 0);
 
-      // Create drink object with price
       const drinkWithPrice = {
-        id: String(drink.id), // <-- forzar a string
+        id: String(drink.id), 
         price: drinkPrice,
         timestamp: new Date().toISOString(),
       };
 
+      let currentDayLength = 1;
+
       if (targetData) {
-        const updatedData = consumptionData.map((d) =>
-          d.date === targetDate
-            ? {
-                ...d,
-                drinks: [...d.drinks, drinkWithPrice],
-                totalCaffeine: Math.max(
-                  0,
-                  (d.totalCaffeine || 0) + safeCaffeineAmount
-                ),
-                totalCost: Math.max(0, (d.totalCost || 0) + drinkPrice),
-              }
-            : d
-        );
+        const updatedDay = {
+            ...targetData,
+            drinks: [...targetData.drinks, drinkWithPrice],
+            totalCaffeine: Math.max(0, (targetData.totalCaffeine || 0) + safeCaffeineAmount),
+            totalCost: Math.max(0, (targetData.totalCost || 0) + drinkPrice),
+            spam_trigger: isSpamTriggered
+        };
+        currentDayLength = updatedDay.drinks.length;
+        const updatedData = consumptionData.map((d) => d.date === targetDate ? updatedDay : d);
         setConsumptionData(updatedData);
-        saveConsumptionDay(updatedData.find((d) => d.date === targetDate));
+        saveConsumptionDay(updatedDay);
       } else {
-        const newData = [
-          ...consumptionData,
-          {
+        const newDay = {
             date: targetDate,
             drinks: [drinkWithPrice],
             totalCaffeine: safeCaffeineAmount,
             totalCost: drinkPrice,
-          },
-        ];
+            spam_trigger: isSpamTriggered
+        };
+        currentDayLength = newDay.drinks.length;
+        const newData = [...consumptionData, newDay];
         newData.sort((a, b) => new Date(b.date) - new Date(a.date));
         setConsumptionData(newData);
-        saveConsumptionDay(newData.find((d) => d.date === targetDate));
+        saveConsumptionDay(newDay);
       }
 
       setSelectedDrinks((prev) => [...prev, drink]);
 
-      // Check for limit warnings 
-      if (goals.enableNotifications && goals.enableDailyLimit && targetDate === new Date().toISOString().split('T')[0]) {
-        const currentCaffeineToday = Math.max(
-          0,
-          (targetData?.totalCaffeine || 0) + safeCaffeineAmount
-        );
-        const percentage = (currentCaffeineToday / goals.dailyLimit) * 100;
-
-        if (percentage >= 100) {
-          addNotification({
-            type: 'warning',
-            title: 'Daily Limit Exceeded!',
-            message: `You've exceeded your daily caffeine limit of ${goals.dailyLimit}mg. Consider moderating your intake.`,
-            autoHide: true,
-            duration: 8000,
-          });
-        } else if (percentage >= 75) {
-          addNotification({
-            type: 'warning',
-            title: 'Approaching Daily Limit',
-            message: `You're at ${Math.round(
-              percentage
-            )}% of your daily caffeine limit.`,
-            progress: percentage,
-            autoHide: true,
-            duration: 6000,
-          });
-        }
+      // Mandatory Anti-Cheat Warning (Independent of User Settings)
+      if (targetDate === new Date().toISOString().split('T')[0] && currentDayLength === 4 && !isSpamTriggered) {
+          setShowStrike1Warning(true);
+      } 
+      // Optional User Success Notification
+      else if (!isSpamTriggered) {
+          if (goals.enableNotifications !== false) { // Default to true if undefined
+              addNotification({
+                type: 'success',
+                title: 'Monster Added!',
+                message: `${drink.name} added to your tracker.`,
+                autoHide: true,
+                duration: 3000,
+              });
+          }
       }
-
-      // Success notification
-      addNotification({
-        type: 'success',
-        title: 'Monster Added!',
-        message: `${drink.name} ($${drinkPrice.toFixed(
-          2
-        )}) added to your tracker.`,
-        autoHide: true,
-        duration: 3000,
-      });
     },
     [consumptionData, goals, saveConsumptionDay]
   );
@@ -342,7 +380,7 @@ function App() {
         const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
         fetch(`${backendUrl}/api/consumption/${dateStr}`, {
           method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
         })
         .then(() => refreshUserRank())
         .catch(err => console.error("Error deleting empty day:", err));
@@ -392,9 +430,9 @@ function App() {
     fetch(`${backendUrl}/api/goals`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify(newGoals),
     });
   };
@@ -406,9 +444,9 @@ function App() {
     fetch(`${backendUrl}/api/settings`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify(newSettings),
     });
   };
@@ -448,21 +486,31 @@ function App() {
 
   if (initialLoading) return <Loader />;
   if (loading) return <Loader />;
-  if (!token || !user) {
+  if (!user) {
     return (
-      <Suspense fallback={<Loader />}>
-        {showRegister ? (
-          <Register
-            onRegister={handleLogin}
-            onSwitchToLogin={() => setShowRegister(false)}
-          />
-        ) : (
-          <Login
-            onLogin={handleLogin}
-            onSwitchToRegister={() => setShowRegister(true)}
-          />
-        )}
-      </Suspense>
+      <div className="relative min-h-screen bg-black overflow-hidden">
+        <Suspense fallback={<Loader />}>
+          {showRegister ? (
+            <Register
+              onRegister={handleLogin}
+              onSwitchToLogin={() => setShowRegister(false)}
+            />
+          ) : (
+            <Login
+              onLogin={handleLogin}
+              onSwitchToRegister={() => setShowRegister(true)}
+            />
+          )}
+          {bannedState && (
+            <BannedScreenModal
+              type={bannedState.type}
+              message={bannedState.message}
+              banUntil={bannedState.ban_until}
+              onClose={() => setBannedState(null)}
+            />
+          )}
+        </Suspense>
+      </div>
     );
   }
 
@@ -498,6 +546,11 @@ function App() {
           onDismiss={dismissNotification}
         />
       </Suspense>
+      
+      <Strike1WarningModal
+         isOpen={showStrike1Warning}
+         onClose={() => setShowStrike1Warning(false)}
+      />
 
       {/* Header */}
       <motion.header
@@ -631,7 +684,6 @@ function App() {
       {activeIAModal === 'leaderboard' && (
         <Suspense fallback={<Loader />}>
           <Leaderboard 
-            token={token} 
             onClose={() => setActiveIAModal(null)} 
           />
         </Suspense>
