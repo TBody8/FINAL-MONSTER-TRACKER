@@ -179,12 +179,10 @@ export default function Leaderboard({ onClose, token }) {
                   
                   <div className="divide-y divide-gray-800/50">
                     {leaderboardData.slice(3).map((user, idx) => (
-                      <motion.div 
+                      <div 
                         key={user.username}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 + (idx * 0.05) }}
-                        className="grid grid-cols-5 md:grid-cols-6 gap-4 p-4 items-center hover:bg-gray-800/30 transition-colors"
+                        className="grid grid-cols-5 md:grid-cols-6 gap-4 p-4 items-center hover:bg-gray-800/30 transition-colors animate-fade-in-up"
+                        style={{ animationDelay: `${0.4 + (idx * 0.05)}s` }}
                       >
                         <div className="col-span-2 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 font-mono text-xs flex items-center justify-center text-gray-400 font-bold">
@@ -196,7 +194,7 @@ export default function Leaderboard({ onClose, token }) {
                         <div className="text-right font-mono text-gray-400 hidden md:block">{user.totalCaffeine}mg</div>
                         <div className="text-right font-mono text-gray-400">{user.totalSpent.toFixed(2)}€</div>
                         <div className="text-right font-mono text-purple-400 flex items-center gap-1 justify-end"><Zap className="w-3 h-3" /> {user.maxStreak || 0}</div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>

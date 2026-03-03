@@ -75,6 +75,7 @@ async def get_consumption_data(username: str = Depends(get_current_username)):
 
 @api_router.post("/consumption", response_model=ConsumptionData)
 async def add_consumption(data: ConsumptionData, username: str = Depends(get_current_username)):
+    global leaderboard_cache
     try:
         # LOG: Mostrar los datos recibidos y el usuario
         print("[POST /consumption] Data recibida:", data.dict())
@@ -93,6 +94,11 @@ async def add_consumption(data: ConsumptionData, username: str = Depends(get_cur
         else:
             print("[POST /consumption] Insertando nuevo consumo para este usuario y fecha")
             await consumption_collection.insert_one(data_dict)
+            
+        # Invalidate Cache
+        leaderboard_cache["data"] = None
+        leaderboard_cache["last_updated"] = None
+        
         return ConsumptionData(**data_dict)
     except Exception as e:
         logging.error(f"Error saving consumption data: {str(e)}")
@@ -100,6 +106,7 @@ async def add_consumption(data: ConsumptionData, username: str = Depends(get_cur
 
 @api_router.delete("/consumption/{date}")
 async def delete_consumption(date: str, username: str = Depends(get_current_username)):
+    global leaderboard_cache
     try:
         print(f"[DELETE /consumption/{date}] Petición recibida para usuario: {username}")
         result = await consumption_collection.delete_one({"date": date, "username": username})
@@ -107,6 +114,10 @@ async def delete_consumption(date: str, username: str = Depends(get_current_user
             print(f"[DELETE /consumption/{date}] No se encontró registro para borrar")
         else:
             print(f"[DELETE /consumption/{date}] Registro borrado exitosamente")
+            # Invalidate Cache only if something was actually deleted
+            leaderboard_cache["data"] = None
+            leaderboard_cache["last_updated"] = None
+            
         return {"status": "success", "message": "Consumption deleted"}
     except Exception as e:
         logging.error(f"Error deleting consumption data: {str(e)}")
@@ -182,9 +193,9 @@ async def update_settings(settings: Settings):
 async def get_leaderboard():
     global leaderboard_cache
     
-    # Check if cache is valid (updated today)
+    # Check if cache has data
     today_str = datetime.now().strftime("%Y-%m-%d")
-    if leaderboard_cache["data"] is not None and leaderboard_cache["last_updated"] == today_str:
+    if leaderboard_cache["data"] is not None:
         return leaderboard_cache["data"]
         
     try:

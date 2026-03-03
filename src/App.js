@@ -143,6 +143,25 @@ function App() {
     localStorage.removeItem('monsterTrackerUser');
   };
 
+  const refreshUserRank = useCallback(() => {
+    if (!token) return;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+    fetch(`${backendUrl}/api/leaderboard`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(leaderboard => {
+        const currentUsername = localStorage.getItem('monsterTrackerUser');
+        if (leaderboard && leaderboard.length > 0 && currentUsername) {
+          const uIndex = leaderboard.findIndex((u) => u.username === currentUsername);
+          setUserRank(uIndex !== -1 ? uIndex + 1 : null);
+        } else {
+          setUserRank(null);
+        }
+      })
+      .catch(err => console.error("Error refreshing rank:", err));
+  }, [token]);
+
   // Guardar solo el día modificado
   const saveConsumptionDay = useCallback(
     (day) => {
@@ -169,17 +188,14 @@ function App() {
         })
         .then((data) => {
           if (data) {
-            console.log(
-              '[FRONTEND] Respuesta del backend al guardar consumo:',
-              data
-            );
+             refreshUserRank();
           }
         })
         .catch((err) => {
           console.error('[FRONTEND] Error de red al guardar consumo:', err);
         });
     },
-    [token, user]
+    [token, user, refreshUserRank]
   );
 
   const handleDrinkSelect = useCallback(
@@ -327,7 +343,9 @@ function App() {
         fetch(`${backendUrl}/api/consumption/${dateStr}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
-        }).catch(err => console.error("Error deleting empty day:", err));
+        })
+        .then(() => refreshUserRank())
+        .catch(err => console.error("Error deleting empty day:", err));
       } else {
         saveConsumptionDay(updatedData.find((d) => d.date === dateStr));
       }
@@ -355,7 +373,7 @@ function App() {
         duration: 3000,
       });
     },
-    [consumptionData, saveConsumptionDay]
+    [consumptionData, saveConsumptionDay, refreshUserRank]
   );
 
   const addNotification = (notification) => {
