@@ -20,6 +20,7 @@ const MonsterWrapped = lazy(() => import('./components/MonsterWrapped'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const KingsAura = lazy(() => import('./components/KingsAura'));
 const UpdateModal = lazy(() => import('./components/UpdateModal'));
+const PWAInstallGuideModal = lazy(() => import('./components/PWAInstallGuideModal'));
 
 function App() {
   const [consumptionData, setConsumptionData] = useState([]);
@@ -40,6 +41,7 @@ function App() {
   const [showStrike1Warning, setShowStrike1Warning] = useState(false);
   const [bannedState, setBannedState] = useState(null);
   const [showHamburger, setShowHamburger] = useState(false);
+  const [showPWAInstallGuide, setShowPWAInstallGuide] = useState(false);
   const [activeIAModal, setActiveIAModal] = useState(null); // 'anomaly' | 'streak' | 'partyMeter' | null
   const [showWrapped, setShowWrapped] = useState(false);
   // Wrapped Activation Logic
@@ -105,6 +107,20 @@ function App() {
           setShowUpdateModal(true);
           localStorage.setItem(updateKey, 'true');
         }, 1500);
+      }
+
+      // Check for PWA Tutorial (Mobile Only, Non-Standalone, Once per User)
+      const pwaGuideKey = 'monsterTracker_pwaGuide_seen';
+      if (!localStorage.getItem(pwaGuideKey)) {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+        
+        if (isMobile && !isStandalone) {
+          setTimeout(() => {
+            setShowPWAInstallGuide(true);
+            localStorage.setItem(pwaGuideKey, 'true');
+          }, 3000); // Show slightly after update modal resolves or on boot
+        }
       }
 
       // Notify user about Monster Wrapped
@@ -655,10 +671,15 @@ function App() {
           onGoalsUpdate={handleGoalsUpdate}
           settings={settings}
           onSettingsUpdate={handleSettingsUpdate}
+          onShowPWAGuide={() => setShowPWAInstallGuide(true)}
         />
         <UpdateModal 
           isOpen={showUpdateModal}
           onClose={() => setShowUpdateModal(false)}
+        />
+        <PWAInstallGuideModal
+          isOpen={showPWAInstallGuide}
+          onClose={() => setShowPWAInstallGuide(false)}
         />
       </Suspense>
 

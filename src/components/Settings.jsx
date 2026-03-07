@@ -8,6 +8,7 @@ import {
   Save,
   X,
   Wine,
+  Download,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -28,6 +29,7 @@ const Settings = ({
   onGoalsUpdate,
   settings,
   onSettingsUpdate,
+  onShowPWAGuide,
 }) => {
   const [localGoals, setLocalGoals] = useState(goals);
   const [localSettings, setLocalSettings] = useState(settings);
@@ -315,6 +317,36 @@ const Settings = ({
                 Estos datos se usarán para los cálculos del Medidor de
                 Borrachera.
               </p>
+            </div>
+          </Card>
+
+          {/* Tutorial Section */}
+          <Card className='bg-gray-800 border-green-500/20 p-6 mt-8'>
+            <div className='flex items-center gap-3 mb-6'>
+              <Download className='w-5 h-5 text-green-400' />
+              <h3 className='text-xl font-semibold text-white'>
+                App Guide & Support
+              </h3>
+            </div>
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <Label className='text-white'>Install as App</Label>
+                  <p className='text-gray-400 text-sm'>
+                    View the tutorial on how to install Monster Tracker to your home screen
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    onClose();
+                    setTimeout(() => onShowPWAGuide(), 300);
+                  }}
+                  variant='outline'
+                  className='bg-gray-700 text-white border-gray-600 hover:bg-gray-600'
+                >
+                  View Guide
+                </Button>
+              </div>
             </div>
           </Card>
         </div>
