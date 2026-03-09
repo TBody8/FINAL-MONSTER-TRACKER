@@ -103,10 +103,11 @@ function App() {
       // Check for App Updates (v2.1)
       const updateKey = 'monsterTracker_v2_1_seen';
       if (!localStorage.getItem(updateKey)) {
-        setTimeout(() => {
-          setShowUpdateModal(true);
-          localStorage.setItem(updateKey, 'true');
-        }, 1500);
+        // [User Request: Disabled temporarily for now. Can be re-enabled for v2.2]
+        // setTimeout(() => {
+        //   setShowUpdateModal(true);
+        //   localStorage.setItem(updateKey, 'true');
+        // }, 1500);
       }
 
       // Check for PWA Tutorial (Mobile Only, Non-Standalone, Once per User)
@@ -116,6 +117,12 @@ function App() {
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
         
         if (isMobile && !isStandalone) {
+          // Dynamically preload the WebP assets so they are cached by the time the modal opens
+          ['tut-1.webp', 'tut-2.webp', 'tut-3.webp', 'tut-4.webp'].forEach(imgName => {
+            const img = new Image();
+            img.src = `/tutorial-images/${imgName}`;
+          });
+
           setTimeout(() => {
             setShowPWAInstallGuide(true);
             localStorage.setItem(pwaGuideKey, 'true');

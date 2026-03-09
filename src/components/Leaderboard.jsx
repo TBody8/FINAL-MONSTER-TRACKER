@@ -160,6 +160,10 @@ export default function Leaderboard({ onClose }) {
                           <span className="text-gray-400 flex items-center gap-1"><Zap className="w-4 h-4 text-purple-500" /> Max Streak</span>
                           <span className="font-mono text-gray-200">{user.maxStreak || 0} Days</span>
                         </div>
+                        <div className="flex justify-between items-center text-sm pt-1">
+                          <span className="text-gray-500 flex items-center gap-1 text-xs"><Flame className="w-3 h-3 text-red-500/80" /> Current Streak</span>
+                          <span className="font-mono text-gray-400 text-xs">{user.currentStreak || 0} Days</span>
+                        </div>
                       </div>
                     </motion.div>
                   );

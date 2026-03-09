@@ -4,22 +4,22 @@ import { X, ChevronRight, ChevronLeft, Download } from 'lucide-react';
 
 const steps = [
   {
-    image: '/tutorial-images/tut-1.jpg',
+    image: '/tutorial-images/tut-1.webp',
     title: 'Abre el menú del navegador',
     description: 'Toca el icono de los tres puntos (⋮) en la esquina derecha de tu navegador Chrome o Safari.',
   },
   {
-    image: '/tutorial-images/tut-2.jpg',
+    image: '/tutorial-images/tut-2.webp',
     title: 'Añadir a Pantalla de Inicio',
     description: 'Busca y selecciona la opción "Añadir a la pantalla de inicio" (o "Instalar aplicación") en el menú desplegable.',
   },
   {
-    image: '/tutorial-images/tut-3.jpg',
+    image: '/tutorial-images/tut-3.webp',
     title: 'Confirma la Instalación',
     description: 'Haz clic en "Añadir" o "Instalar". Esto creará un icono de acceso directo en la pantalla de tu móvil.',
   },
   {
-    image: '/tutorial-images/tut-4.jpg',
+    image: '/tutorial-images/tut-4.webp',
     title: '¡Usa los Atajos Rápidos!',
     description: 'Mantén pulsado el icono de la app para acceder para añadir tus latas. (Solo funciona en Android, en iOS no está disponible).',
   }

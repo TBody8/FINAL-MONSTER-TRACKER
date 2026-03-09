@@ -321,10 +321,11 @@ async def get_leaderboard():
         dates_data = await dates_cursor.to_list(length=100)
         
         user_streaks = {}
+        user_streaks = {}
         for user_dates in dates_data:
             username = user_dates["_id"]
             try:
-                dates = sorted([datetime.strptime(d, "%Y-%m-%d") for d in user_dates.get("dates", [])])
+                dates = sorted([datetime.strptime(d, "%Y-%m-%d") for d in set(user_dates.get("dates", []))])
             except:
                 dates = []
                 
@@ -341,11 +342,21 @@ async def get_leaderboard():
                         current_streak = 1
                 if current_streak > max_streak:
                     max_streak = current_streak
-            user_streaks[username] = max_streak
             
-        # Merge maxStreak into leaderboard data and assign random tiebreaker
+            active_current_streak = 0
+            if dates:
+                today = datetime.now().date()
+                days_since_last = (today - dates[-1].date()).days
+                if days_since_last <= 1:
+                    active_current_streak = current_streak
+                    
+            user_streaks[username] = {"max": max_streak, "current": active_current_streak}
+            
+        # Merge maxStreak and currentStreak into leaderboard data and assign random tiebreaker
         for user in leaderboard_data:
-            user["maxStreak"] = user_streaks.get(user.get("username"), 0)
+            streaks = user_streaks.get(user.get("username"), {"max": 0, "current": 0})
+            user["maxStreak"] = streaks.get("max", 0)
+            user["currentStreak"] = streaks.get("current", 0)
             user["_random_tiebreaker"] = random.random()
             
         # Final Python Sort: totalDrinks(desc), maxStreak(desc), totalSpent(desc), random(desc)
