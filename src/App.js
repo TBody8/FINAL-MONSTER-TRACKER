@@ -278,7 +278,7 @@ function App() {
       const dismissTime = parseInt(localStorage.getItem('strike1_dismiss_time') || '0', 10);
       
       if (dismissTime > 0) {
-        if (Date.now() - dismissTime <= 5000) {
+        if (Date.now() - dismissTime <= 60000) {
           let postClicks = parseInt(localStorage.getItem('post_strike_clicks') || '0', 10);
           postClicks += 1;
           localStorage.setItem('post_strike_clicks', postClicks.toString());

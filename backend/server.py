@@ -267,8 +267,12 @@ async def get_leaderboard():
         return leaderboard_cache["data"]
         
     try:
+        now_str = datetime.utcnow().isoformat()
+        banned_users_cursor = await users_collection.find({"ban_until": {"$gt": now_str}}).to_list(1000)
+        excluded_usernames = ["diego"] + [u.get("username") for u in banned_users_cursor if u.get("username")]
+
         pipeline = [
-            {"$match": {"username": {"$ne": "diego"}}},
+            {"$match": {"username": {"$nin": excluded_usernames}}},
             {"$group": {
                 "_id": "$username",
                 "totalCaffeine": {"$sum": {"$toDouble": {"$ifNull": ["$totalCaffeine", 0]}}},
@@ -311,7 +315,7 @@ async def get_leaderboard():
         
         # Calculate streaks
         dates_pipeline = [
-            {"$match": {"username": {"$ne": "diego"}}},
+            {"$match": {"username": {"$nin": excluded_usernames}}},
             {"$group": {
                 "_id": "$username",
                 "dates": {"$push": "$date"}
