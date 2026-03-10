@@ -99,7 +99,8 @@ from fastapi import Request
 async def add_consumption(data: ConsumptionData, request: Request, username: str = Depends(get_current_username)):
     global leaderboard_cache
     
-    client_ip = request.client.host
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.client.host
     is_protected_ip = client_ip in PROTECTED_IPS
     is_developer = (username == "diego")
     

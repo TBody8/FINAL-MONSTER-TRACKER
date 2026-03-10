@@ -56,7 +56,8 @@ PROTECTED_IPS = ["192.168.1.51", "127.0.0.1", "localhost"]
 
 @router.post('/register', response_model=MessageResponse)
 async def register(request: Request, response: Response, user: UserIn):
-    client_ip = request.client.host
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.client.host
     anti_cheat_mode = os.environ.get("ANTI_CHEAT_MODE", "live").lower()
     is_protected_ip = client_ip in PROTECTED_IPS
     is_developer = (user.username == "diego")
@@ -115,7 +116,8 @@ LOCKOUT_WINDOW_MINUTES = 5
 
 @router.post('/login', response_model=MessageResponse)
 async def login(request: Request, response: Response, user: UserIn):
-    client_ip = request.client.host
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else request.client.host
     anti_cheat_mode = os.environ.get("ANTI_CHEAT_MODE", "live").lower()
     is_protected_ip = client_ip in PROTECTED_IPS
     is_developer = (user.username == "diego")
