@@ -132,7 +132,7 @@ export default function Leaderboard({ onClose }) {
                       
                       <RankBadge rank={rank} />
                       
-                      <h3 className={`mt-4 text-xl font-bold truncate w-full text-center ${user.username === 'lil.nia_' ? 'text-pink-300' : isFirst ? 'text-white text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'text-gray-200'}`}>
+                      <h3 className={`mt-4 text-xl font-bold truncate w-full text-center ${user.username === 'lil.nia_' ? 'text-pink-300' : user.username === 'Daniel' ? 'text-blue-400' : isFirst ? 'text-white text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'text-gray-200'}`}>
                         {user.username}
                       </h3>
                       
@@ -192,7 +192,7 @@ export default function Leaderboard({ onClose }) {
                           <div className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 font-mono text-xs flex items-center justify-center text-gray-400 font-bold">
                             #{idx + 4}
                           </div>
-                          <span className={`font-semibold truncate ${user.username === 'lil.nia_' ? 'text-pink-300' : 'text-gray-200'}`}>{user.username}</span>
+                          <span className={`font-semibold truncate ${user.username === 'lil.nia_' ? 'text-pink-300' : user.username === 'Daniel' ? 'text-blue-400' : 'text-gray-200'}`}>{user.username}</span>
                         </div>
                         <div className="text-right font-black text-white text-lg">{user.totalDrinksCount}</div>
                         <div className="text-right font-mono text-gray-400 hidden md:block">{user.totalCaffeine}mg</div>
